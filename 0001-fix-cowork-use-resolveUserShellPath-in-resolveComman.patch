@@ -1,0 +1,51 @@
+From 099ca031133e740fd139e359e4a8613b9ddb4caa Mon Sep 17 00:00:00 2001
+From: Zhicong Lian <stephenlzc@163.com>
+Date: Tue, 2 Jun 2026 00:05:04 +0800
+Subject: [PATCH] fix(cowork): use resolveUserShellPath in resolveCommand
+ fallback
+
+Reuse resolveUserShellPath() from coworkUtil.ts instead of a
+hardcoded PATH list when the 'which' command fails to find a CLI.
+This ensures agents installed via nvm/fnm/volta are properly detected.
+
+Fixes #22
+---
+ src/main/libs/externalAgentEnvironment.ts | 10 +++-------
+ 1 file changed, 3 insertions(+), 7 deletions(-)
+
+diff --git a/src/main/libs/externalAgentEnvironment.ts b/src/main/libs/externalAgentEnvironment.ts
+index fe131c8..e799117 100644
+--- a/src/main/libs/externalAgentEnvironment.ts
++++ b/src/main/libs/externalAgentEnvironment.ts
+@@ -22,6 +22,7 @@ import {
+   parseHermesDotenvText,
+ } from './hermesConfig';
+ import { readOpenClawGlobalConfig, summarizeOpenClawConfig } from './openclawSystemRuntime';
++import { resolveUserShellPath } from './coworkUtil';
+ 
+ export type CliAppType = 'claude' | 'codex' | 'hermes' | 'openclaw' | 'opencode' | 'grok' | 'qwen' | 'deepseek_tui';
+ 
+@@ -332,18 +333,13 @@ const resolveCommand = (command: string): { found: boolean; path: string | null;
+ 
+   if (process.platform !== 'win32') {
+     const shellPath = process.env.SHELL || '/bin/zsh';
++    const userPath = resolveUserShellPath() ?? process.env.PATH;
+     const shellResult = spawnSync(shellPath, ['-lc', `command -v ${quoteForShell(command)}`], {
+       encoding: 'utf8',
+       timeout: 10_000,
+       env: {
+         ...process.env,
+-        PATH: [
+-          path.join(homeDir(), '.npm-global', 'bin'),
+-          path.join(homeDir(), '.local', 'bin'),
+-          '/opt/homebrew/bin',
+-          '/usr/local/bin',
+-          process.env.PATH ?? '',
+-        ].join(path.delimiter),
++        PATH: userPath,
+       },
+     });
+     if (shellResult.status === 0) {
+-- 
+2.39.5 (Apple Git-154)
+
