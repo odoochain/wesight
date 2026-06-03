@@ -86,6 +86,10 @@ export interface ExternalAgentEnvironmentSnapshotResult {
 
 export interface ExternalAgentEnvironmentProbeOptions {
   commandProbeTimeoutMs?: number;
+  versionProbeTimeoutMs?: number;
+  versionProbeTimeoutMsByAppType?: Partial<Record<CliAppType, number>>;
+  appTypes?: CliAppType[];
+  includeUserShellPath?: boolean;
 }
 
 type CcSwitchSettings = {
@@ -424,17 +428,24 @@ const runCommand = (
   })
 );
 
-const buildProbeEnv = (): NodeJS.ProcessEnv => ({
-  ...process.env,
-  PATH: [
+const buildProbeEnv = (
+  options: ExternalAgentEnvironmentProbeOptions = {},
+): NodeJS.ProcessEnv => {
+  const pathEntries = [
     process.env.PATH ?? '',
     path.join(homeDir(), '.npm-global', 'bin'),
     path.join(homeDir(), '.local', 'bin'),
     '/opt/homebrew/bin',
     '/usr/local/bin',
-    resolveUserShellPath() ?? '',
-  ].join(path.delimiter),
-});
+  ];
+  if (options.includeUserShellPath !== false) {
+    pathEntries.push(resolveUserShellPath() ?? '');
+  }
+  return {
+    ...process.env,
+    PATH: pathEntries.join(path.delimiter),
+  };
+};
 
 const getWindowsSearchPaths = (command: string): string[] => {
   const home = homeDir();
@@ -522,7 +533,7 @@ const resolveCommand = async (
   }
 
   const result = await runCommand(process.platform === 'win32' ? 'where' : 'which', [command], {
-    env: buildProbeEnv(),
+    env: buildProbeEnv(options),
     timeoutMs: options.commandProbeTimeoutMs,
   });
   if (result.status === 0) {
@@ -536,7 +547,7 @@ const resolveCommand = async (
   if (process.platform !== 'win32') {
     const shellPath = process.env.SHELL || '/bin/zsh';
     const shellResult = await runCommand(shellPath, ['-lc', `command -v ${quoteForShell(command)}`], {
-      env: buildProbeEnv(),
+      env: buildProbeEnv(options),
       timeoutMs: options.commandProbeTimeoutMs,
     });
     if (shellResult.status === 0) {
@@ -563,6 +574,7 @@ const resolveCommand = async (
 
 const readCommandVersion = async (
   command: string,
+  appType: CliAppType,
   options: ExternalAgentEnvironmentProbeOptions = {},
 ): Promise<{ version: string | null; durationMs: number; timedOut: boolean }> => {
   const startedAt = Date.now();
@@ -571,7 +583,9 @@ const readCommandVersion = async (
     ? buildWindowsCommandShimArgs(command, ['--version'])
     : ['--version'];
   const result = await runCommand(executable, args, {
-    timeoutMs: options.commandProbeTimeoutMs,
+    timeoutMs: options.versionProbeTimeoutMsByAppType?.[appType]
+      ?? options.versionProbeTimeoutMs
+      ?? options.commandProbeTimeoutMs,
     windowsVerbatimArguments: isWindowsCommandShim(command),
   });
   const durationMs = Date.now() - startedAt;
@@ -743,7 +757,7 @@ const buildCommandStatus = (
     const resolution = await resolveCommand(command, options);
     const resolveMs = Date.now() - resolveStartedAt;
     const versionResult = resolution.found
-      ? await readCommandVersion(resolution.path ?? command, options)
+      ? await readCommandVersion(resolution.path ?? command, appType, options)
       : { version: null, durationMs: 0, timedOut: false };
     const config = buildCliConfigSnapshot(appType, settings, dbPath);
     return {
@@ -798,6 +812,16 @@ const AGENT_ENGINE_COMMANDS = [
   { engine: CoworkAgentEngine.DeepSeekTui, appType: 'deepseek_tui', command: 'deepseek-tui' },
 ] as const satisfies Array<{ engine: CliCoworkAgentEngine; appType: CliAppType; command: string }>;
 
+const listAgentEngineCommands = (
+  options: ExternalAgentEnvironmentProbeOptions = {},
+): typeof AGENT_ENGINE_COMMANDS[number][] => {
+  if (!options.appTypes?.length) {
+    return [...AGENT_ENGINE_COMMANDS];
+  }
+  const appTypes = new Set<CliAppType>(options.appTypes);
+  return AGENT_ENGINE_COMMANDS.filter(({ appType }) => appTypes.has(appType));
+};
+
 const buildCcSwitchSnapshot = (
   appDir: string,
   settingsPath: string,
@@ -846,7 +870,7 @@ export async function getExternalAgentEnvironmentSnapshot(
 ): Promise<ExternalAgentEnvironmentSnapshotResult> {
   const startedAt = Date.now();
   const { appDir, settingsPath, dbPath, settings } = readBaseSnapshotInputs();
-  const results = await Promise.all(AGENT_ENGINE_COMMANDS.map(({ engine, appType, command }) => (
+  const results = await Promise.all(listAgentEngineCommands(options).map(({ engine, appType, command }) => (
     buildCommandStatus(engine, appType, command, settings, dbPath, options)
   )));
 

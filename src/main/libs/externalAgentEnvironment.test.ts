@@ -30,7 +30,12 @@ test('probes CLI commands asynchronously and isolates version timeouts', async (
   writeExecutable('grok', '#!/bin/sh\nif [ "$1" = "--version" ]; then sleep 2; fi\n');
 
   const { snapshot, report } = await getExternalAgentEnvironmentSnapshot({
-    commandProbeTimeoutMs: 750,
+    appTypes: ['claude', 'grok'],
+    includeUserShellPath: false,
+    versionProbeTimeoutMsByAppType: {
+      claude: 1500,
+      grok: 300,
+    },
   });
   const claude = snapshot.engines.find(engine => engine.appType === 'claude');
   const grok = snapshot.engines.find(engine => engine.appType === 'grok');
