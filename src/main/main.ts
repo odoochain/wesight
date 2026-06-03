@@ -1427,6 +1427,23 @@ const resolveCoworkAgentEngine = (): CoworkAgentEngine => {
   return isCoworkAgentEngine(configured) ? configured : CoworkAgentEngineValue.YdCowork;
 };
 
+const ensureSelectedEngineReadyForStartup = async (engine: CoworkAgentEngine): Promise<void> => {
+  if (isOpenClawCoworkAgentEngine(engine)) {
+    const status = await getOpenClawEngineManager().ensureReady();
+    if (status.phase === 'error' || status.phase === 'not_installed') {
+      throw new Error(status.message || 'OpenClaw CLI is not ready.');
+    }
+    return;
+  }
+
+  if (engine === CoworkAgentEngineValue.Hermes) {
+    const status = await getHermesEngineManager().ensureReady();
+    if (status.phase === 'error' || status.phase === 'not_installed') {
+      throw new Error(status.message || 'Hermes Agent CLI is not ready.');
+    }
+  }
+};
+
 type FeishuIMAgentEngine =
   | typeof CoworkAgentEngineValue.OpenClaw
   | typeof CoworkAgentEngineValue.Hermes
@@ -7677,6 +7694,7 @@ if (!gotTheLock) {
     | 'enterprise_sync'
     | 'runtime_forwarders'
     | 'openclaw_config_sync'
+    | 'openclaw_proxy_config_sync'
     | 'hermes_config_sync'
     | 'selected_engine'
     | 'scheduled_tasks'
@@ -7704,6 +7722,7 @@ if (!gotTheLock) {
     'enterprise_sync',
     'runtime_forwarders',
     'openclaw_config_sync',
+    'openclaw_proxy_config_sync',
     'hermes_config_sync',
     'selected_engine',
     'scheduled_tasks',
@@ -8060,12 +8079,13 @@ if (!gotTheLock) {
     }, { degradedOnError: true });
     await runStartupService('selected_engine', async () => {
       const selectedEngineDetectStartedAt = nowMs();
-      const selectedEngine = resolveCoworkAgentEngine();
-      markTiming('selected_engine_detect_ms', selectedEngineDetectStartedAt);
-      if (isOpenClawCoworkAgentEngine(selectedEngine)) {
-        await ensureOpenClawRunningForCowork();
+      try {
+        const selectedEngine = resolveCoworkAgentEngine();
+        await ensureSelectedEngineReadyForStartup(selectedEngine);
+      } finally {
+        markTiming('selected_engine_detect_ms', selectedEngineDetectStartedAt);
+        markTiming('selected_engine_ready_ms', selectedEngineDetectStartedAt);
       }
-      markTiming('selected_engine_ready_ms', selectedEngineDetectStartedAt);
     }, { degradedOnError: true });
 
     await runStartupService('scheduled_tasks', () => {
@@ -8128,14 +8148,16 @@ if (!gotTheLock) {
 
     // Re-sync OpenClaw config after proxy is ready so that providers that route
     // through the proxy (e.g. github-copilot) get the correct baseUrl.
-    if (isOpenClawCoworkAgentEngine(resolveCoworkAgentEngine())) {
-      const proxyResync = await syncOpenClawConfig({
-        reason: 'proxy-ready',
-      });
-      if (proxyResync.changed) {
-        console.log('[Main] OpenClaw config updated after proxy ready, gateway will restart to pick up new config');
+    await runStartupService('openclaw_proxy_config_sync', async () => {
+      if (isOpenClawCoworkAgentEngine(resolveCoworkAgentEngine())) {
+        const proxyResync = await syncOpenClawConfig({
+          reason: 'proxy-ready',
+        });
+        if (proxyResync.changed) {
+          console.log('[Main] OpenClaw config updated after proxy ready, gateway will restart to pick up new config');
+        }
       }
-    }
+    }, { degradedOnError: true });
 
     // Auto-reconnect IM bots that were enabled before restart.
     await runStartupService('im_gateways', async () => {
