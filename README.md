@@ -369,3 +369,13 @@ WeSight is shaped by many excellent open-source projects and agent community pra
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Thank You to Our Contributors
+
+Thanks to everyone who has contributed PRs to WeSight. This wall updates automatically from GitHub contributors data after new contributions are merged.
+
+<div align="center">
+
+[![WeSight Contributors](https://contrib.rocks/image?repo=freestylefly/wesight)](https://github.com/freestylefly/wesight/graphs/contributors)
+
+</div>
