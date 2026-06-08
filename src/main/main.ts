@@ -1,7 +1,7 @@
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { randomBytes } from 'crypto';
 import type { WebContents } from 'electron';
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, net, powerMonitor, powerSaveBlocker,protocol, screen, session, shell, systemPreferences } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, net, powerMonitor, powerSaveBlocker,protocol, screen, session, shell } from 'electron';
 import fs from 'fs';
 import * as http from 'http';
 import type { AddressInfo } from 'net';
@@ -29,7 +29,7 @@ import {
 } from '../shared/cowork/constants';
 import type { CoworkFileActivity } from '../shared/cowork/fileActivity';
 import type { RuntimeMetricsFilters } from '../shared/cowork/runtimeMetrics';
-import type { CoworkSessionRuntimeSnapshot } from '../shared/cowork/runtimeSnapshot';
+import type { CoworkModelOverride, CoworkSessionRuntimeSnapshot } from '../shared/cowork/runtimeSnapshot';
 import { DialogIpcChannel } from '../shared/dialog/constants';
 import {
   FeishuEngineKey,
@@ -69,13 +69,15 @@ import {
   readAllowFromStore,
   rejectPairingRequest,
 } from './im/imPairingStore';
-import type { Platform } from './im/types';
+import type { DingTalkInstanceConfig, FeishuInstanceConfig, Platform, QQInstanceConfig } from './im/types';
 import {
   getCronJobService,
   initCronJobServiceManager,
   initScheduledTaskHelpers,
   registerScheduledTaskHandlers,
 } from './ipcHandlers/scheduledTask';
+import type { ScheduledTaskHandlerDeps } from './ipcHandlers/scheduledTask/handlers';
+import type { ScheduledTaskHelperDeps } from './ipcHandlers/scheduledTask/helpers';
 import {
   ClaudeRuntimeAdapter,
   CodexAppRuntimeAdapter,
@@ -85,6 +87,7 @@ import {
   ExternalCliRuntimeAdapter,
   HermesRuntimeAdapter,
   OpenClawRuntimeAdapter,
+  type PermissionRequest,
 } from './libs/agentEngine';
 import { formatApiFetchLogPayload } from './libs/apiFetchLogSanitizer';
 import { cancelActiveDownload,downloadUpdate, installUpdate } from './libs/appUpdateInstaller';
@@ -102,6 +105,7 @@ import { saveCoworkApiConfig } from './libs/coworkConfigStore';
 import { getCoworkLogPath } from './libs/coworkLogger';
 import { registerProxyTokenRefresher,startCoworkOpenAICompatProxy, stopCoworkOpenAICompatProxy } from './libs/coworkOpenAICompatProxy';
 import { CoworkRunner } from './libs/coworkRunner';
+import { resolveContinuationRuntimeSnapshot } from './libs/coworkRuntimeSnapshot';
 import { ensureCoworkStudioAssets } from './libs/coworkStudioAssets';
 import { generateSessionTitle, probeCoworkModelReadiness } from './libs/coworkUtil';
 import { DeepSeekTuiRuntimeManager } from './libs/deepSeekTuiRuntimeManager';
@@ -113,6 +117,7 @@ import {
 } from './libs/externalAgentCliInstaller';
 import {
   applyExternalAgentConfigForEngine,
+  cleanupWesightManagedClaudeSettings,
   importLocalAgentConfigToModelSettings,
   syncDeepSeekTuiGlobalConfigFromWesightModel,
   syncOpenCodeGlobalConfigFromWesightModel,
@@ -189,7 +194,7 @@ import {
   setSystemProxyEnabled,
 } from './libs/systemProxy';
 import { getLogFilePath, getRecentMainLogEntries,initLogger } from './logger';
-import { McpStore } from './mcpStore';
+import { type McpServerFormData,McpStore } from './mcpStore';
 import { RuntimeTelemetryStore } from './runtimeTelemetryStore';
 import { SkillManager } from './skillManager';
 import { getSkillServiceManager } from './skillServices';
@@ -212,6 +217,22 @@ const IPC_MAX_KEYS = 80;
 const IPC_MAX_ITEMS = 40;
 const MAX_INLINE_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const ENGINE_NOT_READY_CODE = 'ENGINE_NOT_READY';
+type AppProviderConfigForIm = {
+  enabled?: boolean;
+  apiKey?: string;
+  baseUrl?: string;
+  models?: Array<{ id?: string }>;
+};
+type AppConfigForIm = {
+  api?: {
+    key?: string;
+    baseUrl?: string;
+  };
+  model?: {
+    defaultModel?: string;
+  };
+  providers?: Record<string, AppProviderConfigForIm>;
+};
 const MIME_EXTENSION_MAP: Record<string, string> = {
   'image/png': '.png',
   'image/jpeg': '.jpg',
@@ -369,14 +390,14 @@ const sanitizeIpcPayload = (value: unknown, depth = 0, seen?: WeakSet<object>): 
   return String(value);
 };
 
-const sanitizeCoworkMessageForIpc = (message: any): any => {
+const sanitizeCoworkMessageForIpc = (message: CoworkMessage): CoworkMessage => {
   if (!message || typeof message !== 'object') {
     return message;
   }
 
   // Preserve imageAttachments in metadata as-is (base64 data can be very large
   // and must not be truncated by the generic sanitizer).
-  let sanitizedMetadata: unknown;
+  let sanitizedMetadata: CoworkMessage['metadata'];
   if (message.metadata && typeof message.metadata === 'object') {
     const { imageAttachments, ...rest } = message.metadata as Record<string, unknown>;
     const sanitizedRest = sanitizeIpcPayload(rest) as Record<string, unknown> | undefined;
@@ -406,13 +427,13 @@ const sanitizeCoworkFileActivityForIpc = (activity: CoworkFileActivity): CoworkF
     : truncateIpcString(activity.content, IPC_UPDATE_CONTENT_MAX_CHARS),
 });
 
-const sanitizePermissionRequestForIpc = (request: any): any => {
+const sanitizePermissionRequestForIpc = (request: PermissionRequest): PermissionRequest => {
   if (!request || typeof request !== 'object') {
     return request;
   }
   return {
     ...request,
-    toolInput: sanitizeIpcPayload(request.toolInput ?? {}),
+    toolInput: sanitizeIpcPayload(request.toolInput ?? {}) as Record<string, unknown>,
   };
 };
 
@@ -594,11 +615,17 @@ const checkCalendarPermission = async (): Promise<string> => {
       await execAsync('osascript -l JavaScript -e \'Application("Calendar").name()\'', { timeout: 5000 });
       console.log('[Permissions] macOS Calendar access: authorized');
       return 'authorized';
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const stderr = error
+        && typeof error === 'object'
+        && 'stderr' in error
+        && typeof (error as { stderr?: unknown }).stderr === 'string'
+        ? (error as { stderr: string }).stderr
+        : '';
       // Check if it's a permission error
-      if (error.stderr?.includes('不能获取对象') ||
-          error.stderr?.includes('not authorized') ||
-          error.stderr?.includes('Permission denied')) {
+      if (stderr.includes('不能获取对象') ||
+          stderr.includes('not authorized') ||
+          stderr.includes('Permission denied')) {
         console.log('[Permissions] macOS Calendar access: not-determined (needs permission)');
         return 'not-determined';
       }
@@ -625,7 +652,7 @@ const checkCalendarPermission = async (): Promise<string> => {
       await execAsync('powershell -Command "' + checkScript + '"', { timeout: 10000 });
       console.log('[Permissions] Windows Outlook is available');
       return 'authorized';
-    } catch (error) {
+    } catch {
       console.log('[Permissions] Windows Outlook not available or not accessible');
       return 'not-determined';
     }
@@ -953,7 +980,7 @@ const getEngineNotReadyResponse = (status: { message?: string }) => {
   };
 };
 
-const bootstrapOpenClawEngine = async (options: { forceReinstall?: boolean; reason?: string } = {}) => {
+const _bootstrapOpenClawEngine = async (options: { forceReinstall?: boolean; reason?: string } = {}) => {
   if (openClawBootstrapPromise) {
     return openClawBootstrapPromise;
   }
@@ -1207,8 +1234,14 @@ const getExternalProviderAppTypeForEngine = (
   return null;
 };
 
-const resolveRuntimeModelSnapshot = (engine: CoworkAgentEngine): RuntimeModelSnapshot => {
-  const configSource = getConfigSourceForEngine(engine);
+const resolveRuntimeModelSnapshot = (
+  engine: CoworkAgentEngine,
+  options: {
+    configSource?: string | null;
+    modelOverride?: CoworkModelOverride | null;
+  } = {},
+): RuntimeModelSnapshot => {
+  const configSource = options.configSource ?? getConfigSourceForEngine(engine);
   if (engine === CoworkAgentEngineValue.CodexApp) {
     return {
       providerKey: 'codex_app',
@@ -1231,12 +1264,16 @@ const resolveRuntimeModelSnapshot = (engine: CoworkAgentEngine): RuntimeModelSna
   }
 
   try {
-    const resolution = resolveCurrentApiConfig();
+    const modelOverride = options.modelOverride;
+    const resolution = resolveCurrentApiConfig('local', modelOverride?.modelId ? {
+      modelId: modelOverride.modelId,
+      providerName: modelOverride.providerKey || modelOverride.providerName,
+    } : {});
     return {
-      providerKey: resolution.providerMetadata?.providerName ?? null,
+      providerKey: modelOverride?.providerKey ?? resolution.providerMetadata?.providerName ?? null,
       providerName: resolution.providerMetadata?.providerName ?? null,
       modelId: resolution.config?.model ?? null,
-      modelName: resolution.providerMetadata?.modelName ?? resolution.config?.model ?? null,
+      modelName: modelOverride?.modelName ?? resolution.providerMetadata?.modelName ?? resolution.config?.model ?? null,
       configSource,
     };
   } catch {
@@ -1273,8 +1310,12 @@ const getClaudeCodePermissionLabel = (mode: string | null | undefined): string |
 
 const resolveSessionRuntimeSnapshot = (
   engine: CoworkAgentEngine,
+  options: {
+    configSource?: string | null;
+    modelOverride?: CoworkModelOverride | null;
+  } = {},
 ): CoworkSessionRuntimeSnapshot => {
-  const model = resolveRuntimeModelSnapshot(engine);
+  const model = resolveRuntimeModelSnapshot(engine, options);
   const config = getCoworkStore().getConfig();
   const permissionMode = engine === CoworkAgentEngineValue.ClaudeCode
     ? config.claudeCodePermissionMode
@@ -1725,16 +1766,27 @@ const mergeCodexAppStatus = (
 const summarizeAgentEngineProbeReport = (report: ExternalAgentEnvironmentProbeReport): void => {
   console.debug(`[AgentEngineSnapshot] refreshed CLI environment snapshot in ${report.durationMs}ms.`);
   for (const metric of report.metrics) {
-    if (metric.timedOut) {
-      console.debug(`[AgentEngineSnapshot] ${metric.command} probe timed out after ${metric.resolveMs + (metric.versionMs ?? 0)}ms.`);
+    const durationMs = metric.resolveMs + (metric.versionMs ?? 0);
+    const version = metric.version ? ` (${metric.version.replace(/\s+/g, ' ').slice(0, 80)})` : '';
+    const location = metric.path ? ` at ${metric.path}` : '';
+    if (metric.found) {
+      if (metric.timedOut) {
+        console.debug(`[AgentEngineSnapshot] ${metric.command} found${location}${version}, but version probe timed out after ${durationMs}ms.`);
+        continue;
+      }
+      console.debug(`[AgentEngineSnapshot] ${metric.command} found${location}${version} in ${durationMs}ms.`);
       continue;
     }
-    if (metric.error && !metric.found) {
+    if (metric.timedOut) {
+      console.debug(`[AgentEngineSnapshot] ${metric.command} probe timed out after ${durationMs}ms.`);
+      continue;
+    }
+    if (metric.error) {
       console.debug(`[AgentEngineSnapshot] ${metric.command} was not found after ${metric.resolveMs}ms.`);
       continue;
     }
-    console.debug(`[AgentEngineSnapshot] ${metric.command} probe completed in ${metric.resolveMs + (metric.versionMs ?? 0)}ms.`);
-  };
+    console.debug(`[AgentEngineSnapshot] ${metric.command} probe completed in ${durationMs}ms.`);
+  }
 };
 
 const broadcastAgentEngineSnapshotChanged = (response: AgentEngineSnapshotResponse): void => {
@@ -2119,7 +2171,7 @@ const bindCoworkRuntimeForwarder = (): void => {
     messageUpdateCoalescer.append(sessionId, messageId, safeContent);
   });
 
-  runtime.on('permissionRequest', (sessionId: string, request: any) => {
+  runtime.on('permissionRequest', (sessionId: string, request: PermissionRequest) => {
     updateDesktopPetTaskSnapshot(sessionId, DesktopPetTaskStatus.Permission);
     if (runtime.getSessionConfirmationMode(sessionId) === 'text') {
       return;
@@ -2442,7 +2494,7 @@ const startMcpBridge = (): Promise<McpBridgeConfig | null> => {
 /**
  * Stop the MCP Bridge: server manager + HTTP callback.
  */
-const stopMcpBridge = async (): Promise<void> => {
+const _stopMcpBridge = async (): Promise<void> => {
   try {
     if (mcpServerManager) {
       await mcpServerManager.stopServers();
@@ -2661,12 +2713,12 @@ const getIMGatewayManager = () => {
     // Initialize with LLM config provider
     imGatewayManager.initialize({
       getLLMConfig: async () => {
-        const appConfig = sqliteStore.get<any>('app_config');
+        const appConfig = sqliteStore.get<AppConfigForIm>('app_config');
         if (!appConfig) return null;
 
         // Find first enabled provider
         const providers = appConfig.providers || {};
-        for (const [providerName, providerConfig] of Object.entries(providers) as [string, any][]) {
+        for (const [providerName, providerConfig] of Object.entries(providers)) {
           if (providerConfig.enabled && providerConfig.apiKey) {
             const model = providerConfig.models?.[0]?.id;
             return {
@@ -2810,11 +2862,11 @@ const updateTitleBarOverlay = () => {
 };
 
 const DESKTOP_PET_WINDOW_SIZE = {
-  width: 292,
-  height: 236,
+  width: 236,
+  height: 192,
 } as const;
 
-const DESKTOP_PET_TASK_TITLE_MAX_CHARS = 42;
+const DESKTOP_PET_TASK_TITLE_MAX_CHARS = 34;
 let desktopPetTaskSnapshot: DesktopPetTaskSnapshot | null = null;
 
 const getStoredDesktopPetConfig = (): PetConfig => {
@@ -2953,9 +3005,15 @@ const updateDesktopPetTaskSnapshot = (sessionId: string, status: DesktopPetTaskS
     return;
   }
 
-  const config = getCoworkStore().getConfig();
-  const engine = config.agentEngine;
-  const model = resolveRuntimeModelSnapshot(engine);
+  const snapshot = session.runtimeSnapshot;
+  const engine = snapshot?.agentEngine ?? getCoworkStore().getConfig().agentEngine;
+  const fallbackModel = snapshot ? null : resolveRuntimeModelSnapshot(engine);
+  const modelLabel = snapshot?.modelLabel
+    || snapshot?.modelName
+    || snapshot?.modelId
+    || fallbackModel?.modelName
+    || fallbackModel?.modelId
+    || '-';
   const projectName = session.cwd ? path.basename(session.cwd) || APP_NAME : APP_NAME;
   desktopPetTaskSnapshot = {
     sessionId,
@@ -2964,7 +3022,7 @@ const updateDesktopPetTaskSnapshot = (sessionId: string, status: DesktopPetTaskS
     source: getDesktopPetTaskSource(session),
     status,
     engineLabel: getDesktopPetEngineLabel(engine),
-    modelLabel: model.modelName || model.modelId || '-',
+    modelLabel,
     activityText: getDesktopPetTaskActivityText(status),
     updatedAt: Date.now(),
   };
@@ -3036,6 +3094,7 @@ const createDesktopPetWindow = (config: PetConfig): BrowserWindow => {
   petWindow.setVisibleOnAllWorkspaces(true, {
     visibleOnFullScreen: true,
   });
+  petWindow.setIgnoreMouseEvents(true, { forward: true });
 
   petWindow.once('ready-to-show', () => {
     if (petWindow.isDestroyed()) return;
@@ -3410,6 +3469,14 @@ if (!gotTheLock) {
       persistDesktopPetPosition(position);
     }
     return desktopPetWindow.getBounds();
+  });
+
+  ipcMain.handle(DesktopPetIpcChannel.SetMouseInteractive, (_event, input: { interactive?: boolean }) => {
+    if (!desktopPetWindow || desktopPetWindow.isDestroyed()) {
+      return false;
+    }
+    desktopPetWindow.setIgnoreMouseEvents(input?.interactive !== true, { forward: true });
+    return true;
   });
 
   ipcMain.handle(DesktopPetIpcChannel.OpenMainWindow, () => {
@@ -4201,18 +4268,9 @@ if (!gotTheLock) {
     }
   });
 
-  ipcMain.handle('mcp:create', async (_event, data: {
-    name: string;
-    description: string;
-    transportType: string;
-    command?: string;
-    args?: string[];
-    env?: Record<string, string>;
-    url?: string;
-    headers?: Record<string, string>;
-  }) => {
+  ipcMain.handle('mcp:create', async (_event, data: McpServerFormData) => {
     try {
-      getMcpStore().createServer(data as any);
+      getMcpStore().createServer(data);
       const servers = getMcpStore().listServers();
       // Trigger async MCP bridge refresh (don't await — let UI show DB result immediately)
       refreshMcpBridge().catch(err => console.error('[McpBridge] background refresh error:', err));
@@ -4222,18 +4280,9 @@ if (!gotTheLock) {
     }
   });
 
-  ipcMain.handle('mcp:update', async (_event, id: string, data: {
-    name?: string;
-    description?: string;
-    transportType?: string;
-    command?: string;
-    args?: string[];
-    env?: Record<string, string>;
-    url?: string;
-    headers?: Record<string, string>;
-  }) => {
+  ipcMain.handle('mcp:update', async (_event, id: string, data: Partial<McpServerFormData>) => {
     try {
-      getMcpStore().updateServer(id, data as any);
+      getMcpStore().updateServer(id, data);
       const servers = getMcpStore().listServers();
       refreshMcpBridge().catch(err => console.error('[McpBridge] background refresh error:', err));
       return { success: true, servers };
@@ -4338,6 +4387,7 @@ if (!gotTheLock) {
     imageAttachments?: Array<{ name: string; mimeType: string; base64Data: string }>;
     agentId?: string;
     teamId?: string;
+    modelOverride?: CoworkModelOverride | null;
   }) => {
     try {
       const coworkStoreInstance = getCoworkStore();
@@ -4366,7 +4416,9 @@ if (!gotTheLock) {
         };
       }
       applyExternalAgentConfigSourceForEngine(activeEngine);
-      const runtimeSnapshot = resolveSessionRuntimeSnapshot(activeEngine);
+      const runtimeSnapshot = resolveSessionRuntimeSnapshot(activeEngine, {
+        modelOverride: options.modelOverride,
+      });
       prepareRuntimeSnapshotForTurn(runtimeSnapshot);
       console.log(
         `[CoworkSession] starting session with ${getDesktopPetEngineLabel(activeEngine)} using ${runtimeSnapshot.configSource} config.`,
@@ -4455,6 +4507,7 @@ if (!gotTheLock) {
         imageAttachments: options.imageAttachments,
         agentId: targetAgentId,
         agentEngine: activeEngine,
+        modelOverride: options.modelOverride,
         runtimeSnapshot,
       }).catch(error => {
         console.error('Cowork session error:', error);
@@ -4497,6 +4550,7 @@ if (!gotTheLock) {
     systemPrompt?: string;
     activeSkillIds?: string[];
     imageAttachments?: Array<{ name: string; mimeType: string; base64Data: string }>;
+    modelOverride?: CoworkModelOverride | null;
   }) => {
     try {
       subscribeSenderToCoworkSession(event.sender, options.sessionId);
@@ -4504,9 +4558,13 @@ if (!gotTheLock) {
       const inferredEngine = existingSession?.teamId
         ? resolveCoworkAgentEngine()
         : resolveAgentRuntimeEngine(existingSession?.agentId || 'main');
-      const runtimeSnapshot = existingSession?.runtimeSnapshot
-        ?? resolveSessionRuntimeSnapshot(inferredEngine);
-      if (existingSession && !existingSession.runtimeSnapshot) {
+      const runtimeSnapshot = resolveContinuationRuntimeSnapshot({
+        existingSnapshot: existingSession?.runtimeSnapshot,
+        inferredEngine,
+        resolveSnapshot: resolveSessionRuntimeSnapshot,
+        modelOverride: options.modelOverride,
+      });
+      if (existingSession) {
         getCoworkStore().updateSession(options.sessionId, { runtimeSnapshot });
       }
       const activeEngine = runtimeSnapshot.agentEngine;
@@ -4564,6 +4622,7 @@ if (!gotTheLock) {
         imageAttachments: options.imageAttachments,
         agentId: existingSession?.agentId || 'main',
         agentEngine: activeEngine,
+        modelOverride: options.modelOverride,
         runtimeSnapshot,
       }).catch(error => {
         console.error('Cowork continue error:', error);
@@ -5964,12 +6023,12 @@ if (!gotTheLock) {
     getOpenClawRuntimeAdapter: () => openClawRuntimeAdapter,
   });
   initScheduledTaskHelpers({
-    getIMGatewayManager: () => getIMGatewayManager() as any,
+    getIMGatewayManager: () => getIMGatewayManager() as unknown as ReturnType<ScheduledTaskHelperDeps['getIMGatewayManager']>,
   });
   registerScheduledTaskHandlers({
     getCronJobService,
-    getIMGatewayManager: () => getIMGatewayManager() as any,
-    getOpenClawRuntimeAdapter: () => openClawRuntimeAdapter as any,
+    getIMGatewayManager: () => getIMGatewayManager() as unknown as ReturnType<ScheduledTaskHandlerDeps['getIMGatewayManager']>,
+    getOpenClawRuntimeAdapter: () => openClawRuntimeAdapter as unknown as ReturnType<ScheduledTaskHandlerDeps['getOpenClawRuntimeAdapter']>,
   });
 
   // ==================== Permissions IPC Handlers ====================
@@ -6549,7 +6608,7 @@ if (!gotTheLock) {
     }
   });
 
-  ipcMain.handle('im:dingtalk:instance:config:set', async (_event, instanceId: string, config: any, options?: { syncGateway?: boolean }) => {
+  ipcMain.handle('im:dingtalk:instance:config:set', async (_event, instanceId: string, config: DingTalkInstanceConfig, options?: { syncGateway?: boolean }) => {
     try {
       getIMGatewayManager().getIMStore().setDingTalkInstanceConfig(instanceId, config);
       if (options?.syncGateway && shouldSyncRunningIMGatewayConfig()) {
@@ -6599,7 +6658,7 @@ if (!gotTheLock) {
     }
   });
 
-  ipcMain.handle('im:qq:instance:config:set', async (_event, instanceId: string, config: any, options?: { syncGateway?: boolean }) => {
+  ipcMain.handle('im:qq:instance:config:set', async (_event, instanceId: string, config: QQInstanceConfig, options?: { syncGateway?: boolean }) => {
     try {
       getIMGatewayManager().getIMStore().setQQInstanceConfig(instanceId, config);
       if (options?.syncGateway && shouldSyncRunningIMGatewayConfig()) {
@@ -6652,7 +6711,7 @@ if (!gotTheLock) {
     }
   });
 
-  ipcMain.handle('im:feishu:instance:config:set', async (_event, instanceId: string, config: any, options?: { syncGateway?: boolean; engineKey?: unknown }) => {
+  ipcMain.handle('im:feishu:instance:config:set', async (_event, instanceId: string, config: FeishuInstanceConfig, options?: { syncGateway?: boolean; engineKey?: unknown }) => {
     try {
       const engineKey = normalizeFeishuEngineKey(options?.engineKey ?? config?.engineKey);
       getIMGatewayManager().getIMStore().setFeishuInstanceConfigForEngine(engineKey, instanceId, {
@@ -7732,6 +7791,7 @@ if (!gotTheLock) {
     | 'python_runtime'
     | 'skill_services'
     | 'app_config'
+    | 'claude_runtime_config_cleanup'
     | 'openai_compat_proxy'
     | 'im_gateways';
 
@@ -7760,6 +7820,7 @@ if (!gotTheLock) {
     'python_runtime',
     'skill_services',
     'app_config',
+    'claude_runtime_config_cleanup',
     'openai_compat_proxy',
     'im_gateways',
   ];
@@ -8170,6 +8231,12 @@ if (!gotTheLock) {
       const appConfig = getStore().get<AppConfigSettings>('app_config');
       markTiming('config_loaded_ms', configLoadStartedAt);
       await applyProxyPreference(getUseSystemProxyFromConfig(appConfig));
+    }, { degradedOnError: true });
+
+    await runStartupService('claude_runtime_config_cleanup', async () => {
+      if (cleanupWesightManagedClaudeSettings()) {
+        console.log('[ExternalAgentConfigSync] restored Claude Code settings from a previous WeSight runtime session.');
+      }
     }, { degradedOnError: true });
 
     await runStartupService('openai_compat_proxy', async () => {
