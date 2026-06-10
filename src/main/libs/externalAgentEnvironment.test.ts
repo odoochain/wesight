@@ -8,6 +8,8 @@ import { getExternalAgentEnvironmentSnapshot, resolveCliCommand, summarizeCliAut
 let tempDir = '';
 let originalPath = '';
 let originalOpenAiKey: string | undefined;
+let originalAnthropicToken: string | undefined;
+let originalAnthropicKey: string | undefined;
 let originalAppData: string | undefined;
 let originalLocalAppData: string | undefined;
 let originalHome: string | undefined;
@@ -25,6 +27,8 @@ beforeEach(() => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wesight-agent-env-'));
   originalPath = process.env.PATH ?? '';
   originalOpenAiKey = process.env.OPENAI_API_KEY;
+  originalAnthropicToken = process.env.ANTHROPIC_AUTH_TOKEN;
+  originalAnthropicKey = process.env.ANTHROPIC_API_KEY;
   originalAppData = process.env.APPDATA;
   originalLocalAppData = process.env.LOCALAPPDATA;
   originalHome = process.env.HOME;
@@ -35,6 +39,8 @@ beforeEach(() => {
   process.env.HOME = tempDir;
   process.env.USERPROFILE = tempDir;
   delete process.env.OPENAI_API_KEY;
+  delete process.env.ANTHROPIC_AUTH_TOKEN;
+  delete process.env.ANTHROPIC_API_KEY;
 });
 
 afterEach(() => {
@@ -43,6 +49,16 @@ afterEach(() => {
     delete process.env.OPENAI_API_KEY;
   } else {
     process.env.OPENAI_API_KEY = originalOpenAiKey;
+  }
+  if (originalAnthropicToken === undefined) {
+    delete process.env.ANTHROPIC_AUTH_TOKEN;
+  } else {
+    process.env.ANTHROPIC_AUTH_TOKEN = originalAnthropicToken;
+  }
+  if (originalAnthropicKey === undefined) {
+    delete process.env.ANTHROPIC_API_KEY;
+  } else {
+    process.env.ANTHROPIC_API_KEY = originalAnthropicKey;
   }
   if (originalAppData === undefined) {
     delete process.env.APPDATA;
