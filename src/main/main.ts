@@ -129,6 +129,7 @@ import {
   getExternalAgentEnvironmentSnapshot,
   getPlaceholderExternalAgentEnvironmentSnapshot,
 } from './libs/externalAgentEnvironment';
+import { resolveLocalClaudeCodeConfigSnapshot } from './libs/externalAgentLocalEnv';
 import {
   type ExternalAgentProviderAppType,
   type ExternalAgentProviderInput,
@@ -1254,6 +1255,16 @@ const resolveRuntimeModelSnapshot = (
   const appType = getExternalProviderAppTypeForEngine(engine);
   if (appType && configSource === ExternalAgentConfigSource.LocalCli) {
     const provider = getExternalAgentProviderStore().getCurrentProvider(appType);
+    if (engine === CoworkAgentEngineValue.ClaudeCode) {
+      const localClaudeConfig = resolveLocalClaudeCodeConfigSnapshot(provider);
+      return {
+        providerKey: localClaudeConfig?.sourceType === 'selected_provider' ? provider?.id ?? null : null,
+        providerName: localClaudeConfig?.sourceName ?? provider?.name ?? null,
+        modelId: localClaudeConfig?.model || provider?.summary.model?.trim() || null,
+        modelName: localClaudeConfig?.model || provider?.summary.model?.trim() || null,
+        configSource,
+      };
+    }
     return {
       providerKey: provider?.id ?? null,
       providerName: provider?.name ?? null,
