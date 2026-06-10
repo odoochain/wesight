@@ -6,7 +6,10 @@ import electron from 'vite-plugin-electron';
 import renderer from 'vite-plugin-electron-renderer';
 
 // https://vitejs.dev/config/
-const devPort = 5175;
+// devPort moved 5175 -> 5180: freellmapi's dev vite already squats 5173/5175,
+// and hmr.port below must match the serving port or the HMR socket connects to
+// the wrong server and the window reload-flickers.
+const devPort = 5180;
 const katexVersion = process.env.npm_package_dependencies_katex?.replace(/^[~^]/, '') || '0.16.0';
 
 export default defineConfig({
