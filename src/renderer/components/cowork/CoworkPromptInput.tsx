@@ -576,12 +576,13 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
 
   const addImageAttachmentFromDataUrl = useCallback((name: string, dataUrl: string) => {
     // Use the dataUrl as the unique key (no file path for inline images)
-    const pseudoPath = `inline:${name}:${Date.now()}`;
+    const displayName = name.trim() || 'pasted-image.png';
+    const pseudoPath = `inline:${displayName}:${Date.now()}`;
     dispatch(addDraftAttachment({
       draftKey,
       attachment: {
         path: pseudoPath,
-        name,
+        name: displayName,
         isImage: true,
         dataUrl,
       },
@@ -681,10 +682,15 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
             // Fallback: add as regular file attachment
             addAttachment(nativePath);
           } else {
-            // No native path (clipboard/drag from browser) - read via FileReader
+            // No native path (clipboard/drag from browser): stage a real file so agent tools can read it.
             try {
               const dataUrl = await fileToDataUrl(file);
-              addImageAttachmentFromDataUrl(file.name, dataUrl);
+              const stagedPath = await saveInlineFile(file);
+              if (stagedPath) {
+                addAttachment(stagedPath, { isImage: true, dataUrl });
+              } else {
+                addImageAttachmentFromDataUrl(file.name, dataUrl);
+              }
             } catch (error) {
               console.error('Failed to read image from clipboard:', error);
               const stagedPath = await saveInlineFile(file);
