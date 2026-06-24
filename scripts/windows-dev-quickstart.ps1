@@ -12,7 +12,7 @@
 param(
   [switch]$SkipMingit,    # 跳过 mingit 安装（如果系统已装 Git Bash）
   [switch]$SkipPnpm,      # 跳过 pnpm 安装
-  [int]$VitePort = 5175
+  [int]$VitePort = 5180   # 5180 (not 5175) to avoid freellmapi's dev vite which squats 5173/5175
 )
 
 $ErrorActionPreference = 'Stop'
