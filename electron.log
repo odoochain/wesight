@@ -1,0 +1,47 @@
+
+[16:30:15.787] [Auth] custom protocol registered for wesight://
+[16:30:15.789] [Main] initApp: waiting for app.whenReady()
+[16:30:16.047] [Performance] recorded app_ready_ms in 558ms
+[16:30:16.048] [Main] initApp: app is ready
+[16:30:16.049] [Main] initApp: default project dir ensured
+[16:30:16.117] [Main] initApp: starting initStore()
+[16:30:16.141] [Performance] recorded db_init_ms in 24ms
+[16:30:16.142] [Main] initApp: store initialized
+[16:30:17.236] [Main] initApp: creating window
+[16:30:17.331] [Performance] recorded window_created_ms in 95ms
+[16:30:17.367] [Performance] recorded t0_ready_ms in 1878ms
+[16:30:17.368] [Main] initApp: window created
+[16:30:17.369] [Performance] recorded session_recovery_ms in 0ms
+[16:30:17.369] [Main] initApp: resetRunningSessions done, count: 0
+[16:30:17.371] [Performance] recorded runtime_call_recovery_ms in 0ms
+[16:30:17.372] [Performance] recorded t1_ready_ms in 1882ms
+[16:30:17.381] [OpenClawTokenProxy] started on 127.0.0.1:49190
+[16:30:17.382] [Main] OpenClaw token proxy started
+[16:30:17.392] [Performance] recorded selected_engine_detect_ms in 0ms
+[16:30:17.392] [Performance] recorded selected_engine_ready_ms in 1ms
+[16:30:17.394] [Main] initApp: setStoreGetter done
+[16:30:17.395] [Main] initApp: getSkillManager done
+[16:30:17.396] [Main] initApp: syncBundledSkillsToUserData done
+[16:30:17.397] [Main] initApp: recoverInterruptedUpgrades done
+[16:30:17.420] [Main] initApp: startWatching done
+[16:30:17.422] [python-runtime] Bundled python runtime not found in application resources.
+[16:30:17.422] [Startup] service python_runtime degraded during background startup: Error: Bundled python runtime not found in application resources.
+    at runStartupService.degradedOnError (D:\dev\lawpaddle\wesight\dist-electron\main.js:101014:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async runStartupService (D:\dev\lawpaddle\wesight\dist-electron\main.js:100729:7)
+    at async D:\dev\lawpaddle\wesight\dist-electron\main.js:101011:7
+[16:30:17.424] [Main] initApp: getSkillServiceManager done
+[16:30:17.424] [SkillServices] Starting skill services...
+[16:30:17.426] [SkillServices] Starting Web Search Bridge Server...
+[16:30:17.563] [SkillServices] Web Search Bridge Server starting (PID: 23180, runtime: node)
+[16:30:17.564] [SkillServices] Logs: D:\dev\lawpaddle\wesight\SKILLs\web-search\.server.log
+[16:30:18.716] [Performance] recorded window_ready_to_show_ms in 1479ms
+[16:30:18.805] [Performance] recorded window_did_finish_load_ms in 1568ms
+[16:30:20.576] [SkillServices] Web Search Bridge Server started (PID: 23180)
+[16:30:20.576] [Main] initApp: skill services started
+[16:30:20.577] [Performance] recorded skills_ready_ms in 3182ms
+[16:30:20.577] [Performance] recorded config_loaded_ms in 0ms
+[16:30:20.579] [Main] System proxy disabled (direct mode).
+[16:30:20.592] [IMGatewayManager] Cowork handler created
+[16:30:20.593] [Performance] recorded im_ready_ms in 4ms
+[16:30:20.594] [Performance] recorded t2_ready_ms in 5105ms

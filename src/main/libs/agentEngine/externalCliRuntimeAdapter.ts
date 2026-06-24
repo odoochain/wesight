@@ -1145,6 +1145,270 @@ export class ExternalCliRuntimeAdapter extends EventEmitter implements CoworkRun
     return `Kimi Code returned an error.\n\n${message}`;
   }
 
+  private completeCodexSessionFromEvent
+    const shareDir = fs.existsSync(path.join(kimiCodeShareDir, 'config.toml'))
+      || fs.existsSync(path.join(kimiCodeShareDir, 'skills'))
+      ? kimiCodeShareDir
+      : kimiSdkShareDir;
+    const loggedIn = safeKimiIsLoggedIn(sdk, shareDir) || safeKimiIsLoggedIn(sdk, undefined);
+    if (!loggedIn) {
+      this.cleanupImagePaths(imagePaths);
+      this.handleError(sessionId, 'Kimi Code is not logged in. Please open a terminal, run kimi, and complete /login or /setup, then retry in WeSight.');
+      return true;
+    }
+
+    const commandResolution = await resolveCliCommand('kimi', {
+      includeUserShellPath: true,
+      commandProbeTimeoutMs: 4_000,
+    });
+    if (!commandResolution.found) return false;
+
+    const selectedProvider = this.getSelectedProviderForLocalCli();
+    const selectedModel = runtimeSnapshot?.modelId
+      ?? selectedProvider?.summary.model
+      ?? null;
+    const permissionMode = this.store.getConfig().kimiCodePermissionMode ?? KimiCodePermissionMode.Auto;
+    const sdkEnv = Object.fromEntries(
+      Object.entries(env).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+    );
+    sdkEnv.KIMI_SHARE_DIR = shareDir;
+    const promptWithFiles = imagePaths.length > 0
+      ? `${prompt}\n\nAttached local files:\n${imagePaths.join('\n')}`
+      : prompt;
+
+    const kimiSession = sdk.createSession({
+      workDir: cwd,
+      sessionId: previousSessionId ?? undefined,
+      model: selectedModel || undefined,
+      yoloMode: permissionMode === KimiCodePermissionMode.Yolo || permissionMode === KimiCodePermissionMode.Auto,
+      executable: commandResolution.path ?? 'kimi',
+      env: sdkEnv,
+      clientInfo: {
+        name: 'WeSight',
+        version: 'desktop',
+      },
+    });
+    if (permissionMode === KimiCodePermissionMode.Plan && typeof kimiSession.setPlanMode === 'function') {
+      try {
+        await kimiSession.setPlanMode(true);
+      } catch (error) {
+        console.warn('[ExternalCliRuntimeAdapter] failed to enable Kimi Code plan mode:', error);
+      }
+    }
+
+    const currentSession = this.store.getSession(sessionId);
+    const active: ActiveCliSession = {
+      child: null,
+      sessionId,
+      cliSessionId: previousSessionId ?? null,
+      startedAt: Date.now(),
+      initialMessageCount: currentSession?.messages.length ?? 0,
+      assistantMessageId: null,
+      assistantContent: '',
+      assistantOutputStartedLogged: false,
+      stderrTail: '',
+      cliErrorMessage: null,
+      sawEvent: false,
+      sawClaudeVisibleOutput: false,
+      startupTimer: null,
+      noContentNoticeTimer: null,
+      noContentTimeoutTimer: null,
+      imagePaths,
+      codexHomeDir: null,
+      claudeRuntimeConfigLease: null,
+      localClaudeConfig: null,
+      configSource: this.getConfigSource(),
+      codexGeneratedImageIds: new Set(),
+      completedFromEvent: false,
+      openSquillaRouterCardEmitted: false,
+      openSquillaRouterLogSummary: {},
+      openSquillaRpcClient: null,
+      kimiSession,
+      kimiTurn: null,
+      kimiPendingApprovals: new Map(),
+    };
+    this.activeSessions.set(sessionId, active);
+
+    try {
+      const turn = kimiSession.prompt(promptWithFiles);
+      active.kimiTurn = turn;
+      for await (const event of turn) {
+        if (this.activeSessions.get(sessionId) !== active) break;
+        active.sawEvent = true;
+        this.handleKimiSdkEvent(active, event);
+      }
+      this.clearSessionTimers(active);
+      this.finalizeAssistant(active);
+      this.cleanupImagePaths(active.imagePaths);
+      this.releaseActiveSession(active);
+      if (this.stoppedSessions.has(sessionId)) {
+        this.store.updateSession(sessionId, { status: 'idle' });
+        this.emit('sessionStopped', sessionId);
+        return true;
+      }
+      const runtimeSessionId = firstString(kimiSession.sessionId) ?? previousSessionId;
+      this.store.updateSession(sessionId, { status: 'completed', claudeSessionId: runtimeSessionId ?? null });
+      this.applyTurnMemoryUpdates(sessionId);
+      this.emit('complete', sessionId, runtimeSessionId ?? null);
+      return true;
+    } catch (error) {
+      this.clearSessionTimers(active);
+      this.finalizeAssistant(active);
+      this.cleanupImagePaths(active.imagePaths);
+      this.releaseActiveSession(active);
+      this.handleError(sessionId, this.formatKimiSdkError(error));
+      return true;
+    }
+  }
+
+  private handleKimiSdkEvent(active: ActiveCliSession, event: unknown): void {
+    if (!isRecord(event)) return;
+    const eventType = firstString(event.type);
+    const payload = isRecord(event.payload) ? event.payload : {};
+    if (eventType === 'ContentPart') {
+      this.handleKimiContentPart(active, payload);
+      return;
+    }
+    if (eventType === 'ToolCall') {
+      this.handleKimiToolCall(active, payload);
+      return;
+    }
+    if (eventType === 'ToolResult') {
+      this.handleKimiToolResult(active, payload);
+      return;
+    }
+    if (eventType === 'ApprovalRequest') {
+      this.handleKimiApprovalRequest(active, payload);
+      return;
+    }
+    if (eventType === 'StatusUpdate') {
+      this.handleKimiStatusUpdate(active, payload);
+      return;
+    }
+    if (eventType === 'TurnEnd') {
+      active.completedFromEvent = true;
+    }
+  }
+
+  private handleKimiContentPart(active: ActiveCliSession, payload: Record<string, unknown>): void {
+    const contentType = firstString(payload.type);
+    if (contentType === 'text') {
+      const text = firstString(payload.text);
+      if (text) this.appendAssistant(active, text);
+      return;
+    }
+    if (contentType === 'think') {
+      const think = firstString(payload.think);
+      if (!think) return;
+      this.addToolMessage(active.sessionId, {
+        type: 'tool_result',
+        content: think,
+        metadata: {
+          toolName: 'Kimi Think',
+          isThinking: true,
+          isStreaming: false,
+        },
+      });
+    }
+  }
+
+  private handleKimiToolCall(active: ActiveCliSession, payload: Record<string, unknown>): void {
+    const fn = isRecord(payload.function) ? payload.function : {};
+    const toolName = firstString(fn.name) ?? 'Kimi Tool';
+    const rawArgs = firstString(fn.arguments);
+    const toolInput = parseJsonObjectSafe(rawArgs) ?? (rawArgs ? { input: rawArgs } : {});
+    this.addToolMessage(active.sessionId, {
+      type: 'tool_use',
+      content: toolName,
+      metadata: {
+        toolName,
+        toolInput,
+        toolUseId: firstString(payload.id),
+      },
+    });
+  }
+
+  private handleKimiToolResult(active: ActiveCliSession, payload: Record<string, unknown>): void {
+    const returnValue = isRecord(payload.return_value) ? payload.return_value : {};
+    const output = this.extractKimiContentText(returnValue.output);
+    const display = Array.isArray(returnValue.display) ? returnValue.display : [];
+    const toolName = this.getKimiDisplayToolName(display) ?? 'Kimi Tool';
+    this.addToolMessage(active.sessionId, {
+      type: 'tool_result',
+      content: output || stringifyPayload(returnValue),
+      metadata: {
+        toolName,
+        toolUseId: firstString(payload.tool_call_id),
+        isError: returnValue.is_error === true,
+        toolResultDisplay: display,
+      },
+    });
+  }
+
+  private handleKimiApprovalRequest(active: ActiveCliSession, payload: Record<string, unknown>): void {
+    const sdkRequestId = firstString(payload.id);
+    if (!sdkRequestId) return;
+    const requestId = `kimi-${active.sessionId}-${sdkRequestId}`;
+    active.kimiPendingApprovals.set(requestId, sdkRequestId);
+    this.emit('permissionRequest', active.sessionId, {
+      requestId,
+      toolName: firstString(payload.action, payload.sender) ?? 'Kimi Approval',
+      toolUseId: firstString(payload.tool_call_id),
+      toolInput: {
+        description: firstString(payload.description) ?? '',
+        action: firstString(payload.action) ?? '',
+        sender: firstString(payload.sender) ?? '',
+        display: Array.isArray(payload.display) ? payload.display : [],
+      },
+    });
+  }
+
+  private handleKimiStatusUpdate(active: ActiveCliSession, payload: Record<string, unknown>): void {
+    const tokenUsage = isRecord(payload.token_usage) ? payload.token_usage : {};
+    this.emit('runtimeMetric', active.sessionId, {
+      type: 'usage',
+      inputTokens: numberOrNull(tokenUsage.input_other),
+      outputTokens: numberOrNull(tokenUsage.output),
+      cacheReadTokens: numberOrNull(tokenUsage.input_cache_read),
+      cacheWriteTokens: numberOrNull(tokenUsage.input_cache_creation),
+      contextTokens: numberOrNull(payload.context_usage),
+      tokensEstimated: false,
+    });
+  }
+
+  private extractKimiContentText(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (!Array.isArray(value)) return '';
+    return value
+      .map((item) => {
+        if (!isRecord(item)) return '';
+        if (item.type === 'text') return firstString(item.text) ?? '';
+        if (item.type === 'think') return firstString(item.think) ?? '';
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  private getKimiDisplayToolName(display: unknown[]): string | null {
+    const first = display.find((item) => isRecord(item)) as Record<string, unknown> | undefined;
+    if (!first) return null;
+    const type = firstString(first.type);
+    if (!type) return null;
+    if (type === 'diff') return 'Kimi Edit';
+    if (type === 'todo') return 'TodoWrite';
+    if (type === 'shell') return 'Bash';
+    return `Kimi ${type}`;
+  }
+
+  private formatKimiSdkError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/login|auth|credential|unauthorized/i.test(message)) {
+      return 'Kimi Code is not logged in or its login has expired. Please open a terminal, run kimi, and complete /login or /setup, then retry in WeSight.';
+    }
+    return `Kimi Code returned an error.\n\n${message}`;
+  }
+
   private completeCodexSessionFromEvent(active: ActiveCliSession): void {
     if (active.completedFromEvent) return;
     if (this.store.getSession(active.sessionId)?.status === 'error') return;

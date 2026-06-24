@@ -1,0 +1,35 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m654[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5180[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.7:[1m5180[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[36mvite v5.4.21 [32mbuilding for development...[36m[39m
+[36m
+watching for file changes...[39m
+[36mvite v5.4.21 [32mbuilding for development...[36m[39m
+[36m
+watching for file changes...[39m
+[36m
+build started...[39m
+[36m
+build started...[39m
+transforming...
+transforming...
+[32m✓[39m 7 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist-electron/[22m[36mpreload.js  [39m[1m[2m37.84 kB[22m[1m[22m[2m │ gzip: 6.06 kB[22m[2m │ map: 92.46 kB[22m
+[36mbuilt in 2252ms.[39m
+[32m✓[39m 97 modules transformed.
+[31msrc/main/libs/agentEngine/hermesRuntimeAdapter.ts (781:12): Expected ';', '}' or <eof> (Note that you need plugins to import files that are not JavaScript)[39m
+file: [36mD:/dev/lawpaddle/wesight/src/main/libs/agentEngine/hermesRuntimeAdapter.ts:781:12[39m
+[33m
+779:   ): Promise<{ phase?: string; status?: string; error?: string } | null> {
+780:     try {
+781:       const response = await fetch(`${gatewayUrl}/v1/runs/${encodeURIComponent(runId)}`, {
+                 ^
+782:         method: 'GET',
+783:         headers: {
+[39m
