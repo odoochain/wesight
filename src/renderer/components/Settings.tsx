@@ -207,6 +207,7 @@ const providerKeys = [
   'openrouter',
   'github-copilot',
   'ollama',
+  'lawpaddle-chain',
   ...CUSTOM_PROVIDER_KEYS,
 ] as const;
 

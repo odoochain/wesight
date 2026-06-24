@@ -222,6 +222,17 @@ export interface AppConfig {
         supportsImage?: boolean;
       }>;
     };
+    'lawpaddle-chain': {
+      enabled: boolean;
+      apiKey: string;
+      baseUrl: string;
+      apiFormat?: 'anthropic' | 'openai' | 'gemini';
+      models?: Array<{
+        id: string;
+        name: string;
+        supportsImage?: boolean;
+      }>;
+    };
     [key: string]: {
       enabled: boolean;
       apiKey: string;
