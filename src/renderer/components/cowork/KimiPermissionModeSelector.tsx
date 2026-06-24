@@ -4,8 +4,8 @@ import {
   ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
 import {
-  ClaudeCodePermissionMode,
-  type ClaudeCodePermissionMode as ClaudeCodePermissionModeType,
+  KimiCodePermissionMode,
+  type KimiCodePermissionMode as KimiCodePermissionModeType,
 } from '@shared/cowork/constants';
 import React from 'react';
 import { useSelector } from 'react-redux';
@@ -15,44 +15,39 @@ import { i18nService } from '../../services/i18n';
 import type { RootState } from '../../store';
 import ClickInfoPopover from '../ui/ClickInfoPopover';
 
-interface ClaudePermissionModeSelectorProps {
+interface KimiPermissionModeSelectorProps {
   dropdownDirection?: 'up' | 'down';
   disabled?: boolean;
 }
 
 const OPTIONS: Array<{
-  value: ClaudeCodePermissionModeType;
+  value: KimiCodePermissionModeType;
   labelKey: string;
   hintKey: string;
 }> = [
   {
-    value: ClaudeCodePermissionMode.BypassPermissions,
-    labelKey: 'coworkAgentClaudeCodePermissionAuto',
-    hintKey: 'coworkAgentClaudeCodePermissionAutoHint',
+    value: KimiCodePermissionMode.Auto,
+    labelKey: 'coworkAgentKimiCodePermissionAuto',
+    hintKey: 'coworkAgentKimiCodePermissionAutoHint',
   },
   {
-    value: ClaudeCodePermissionMode.Default,
-    labelKey: 'coworkAgentClaudeCodePermissionDefault',
-    hintKey: 'coworkAgentClaudeCodePermissionDefaultHint',
+    value: KimiCodePermissionMode.Yolo,
+    labelKey: 'coworkAgentKimiCodePermissionYolo',
+    hintKey: 'coworkAgentKimiCodePermissionYoloHint',
   },
   {
-    value: ClaudeCodePermissionMode.Plan,
-    labelKey: 'coworkAgentClaudeCodePermissionPlan',
-    hintKey: 'coworkAgentClaudeCodePermissionPlanHint',
-  },
-  {
-    value: ClaudeCodePermissionMode.AcceptEdits,
-    labelKey: 'coworkAgentClaudeCodePermissionAcceptEdits',
-    hintKey: 'coworkAgentClaudeCodePermissionAcceptEditsHint',
+    value: KimiCodePermissionMode.Plan,
+    labelKey: 'coworkAgentKimiCodePermissionPlan',
+    hintKey: 'coworkAgentKimiCodePermissionPlanHint',
   },
 ];
 
-const ClaudePermissionModeSelector: React.FC<ClaudePermissionModeSelectorProps> = ({
+const KimiPermissionModeSelector: React.FC<KimiPermissionModeSelectorProps> = ({
   dropdownDirection = 'up',
   disabled = false,
 }) => {
-  const selectedMode = useSelector((state: RootState) => state.cowork.config.claudeCodePermissionMode)
-    ?? ClaudeCodePermissionMode.BypassPermissions;
+  const selectedMode = useSelector((state: RootState) => state.cowork.config.kimiCodePermissionMode)
+    ?? KimiCodePermissionMode.Auto;
   const [isOpen, setIsOpen] = React.useState(false);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -79,7 +74,7 @@ const ClaudePermissionModeSelector: React.FC<ClaudePermissionModeSelectorProps> 
     };
   }, [isOpen]);
 
-  const selectMode = async (mode: ClaudeCodePermissionModeType) => {
+  const selectMode = async (mode: KimiCodePermissionModeType) => {
     if (disabled || isUpdating || mode === selectedMode) {
       setIsOpen(false);
       return;
@@ -87,11 +82,11 @@ const ClaudePermissionModeSelector: React.FC<ClaudePermissionModeSelectorProps> 
     setIsUpdating(true);
     setError(null);
     try {
-      const ok = await coworkService.updateConfig({ claudeCodePermissionMode: mode });
+      const ok = await coworkService.updateConfig({ kimiCodePermissionMode: mode });
       if (ok) {
         setIsOpen(false);
       } else {
-        setError(i18nService.t('coworkAgentClaudeCodePermissionUpdateFailed'));
+        setError(i18nService.t('coworkAgentKimiCodePermissionUpdateFailed'));
       }
     } finally {
       setIsUpdating(false);
@@ -105,21 +100,21 @@ const ClaudePermissionModeSelector: React.FC<ClaudePermissionModeSelectorProps> 
         onClick={() => setIsOpen((value) => !value)}
         disabled={disabled || isUpdating}
         className={`flex h-8 items-center gap-2 rounded-lg px-2.5 text-sm text-foreground transition-colors hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-60 ${isOpen ? 'bg-surface-raised' : ''}`}
-        title={i18nService.t('coworkAgentClaudeCodePermissionTitle')}
-        aria-label={i18nService.t('coworkAgentClaudeCodePermissionTitle')}
+        title={i18nService.t('coworkAgentKimiCodePermissionTitle')}
+        aria-label={i18nService.t('coworkAgentKimiCodePermissionTitle')}
       >
         <ShieldCheckIcon className="h-4 w-4 text-secondary" />
-        <span className="max-w-[82px] truncate font-medium">
+        <span className="max-w-[64px] truncate font-medium">
           {i18nService.t(selectedOption.labelKey)}
         </span>
         <ChevronDownIcon className="h-4 w-4 text-secondary" />
       </button>
 
       {isOpen && (
-        <div className={`absolute right-0 ${dropdownPositionClass} z-50 w-56 overflow-hidden rounded-xl border border-border bg-surface shadow-popover popover-enter`}>
+        <div className={`absolute right-0 ${dropdownPositionClass} z-50 w-52 overflow-hidden rounded-xl border border-border bg-surface shadow-popover popover-enter`}>
           <div className="border-b border-border px-3.5 py-2.5">
             <div className="text-xs font-medium text-foreground">
-              {i18nService.t('coworkAgentClaudeCodePermissionTitle')}
+              {i18nService.t('coworkAgentKimiCodePermissionTitle')}
             </div>
           </div>
           {error && (
@@ -174,4 +169,4 @@ const ClaudePermissionModeSelector: React.FC<ClaudePermissionModeSelectorProps> 
   );
 };
 
-export default ClaudePermissionModeSelector;
+export default KimiPermissionModeSelector;

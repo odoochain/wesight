@@ -118,6 +118,24 @@ const engineAvatarManifest: Record<CoworkAgentEngine, CoworkStudioAvatar> = {
     faceColor: 0xbfdbfe,
     prop: 'tui',
   },
+  [CoworkAgentEngine.OpenSquilla]: {
+    id: 'opensquilla',
+    nameTag: 'OpenSquilla',
+    primaryColor: 0x1f9d7a,
+    secondaryColor: 0x114b3d,
+    accentColor: 0xb7f7d0,
+    faceColor: 0xd6ffe9,
+    prop: 'claw',
+  },
+  [CoworkAgentEngine.KimiCode]: {
+    id: 'kimi_code',
+    nameTag: 'Kimi Code',
+    primaryColor: 0x111827,
+    secondaryColor: 0x020617,
+    accentColor: 0xffd166,
+    faceColor: 0xfef3c7,
+    prop: 'terminal',
+  },
   [CoworkAgentEngine.YdCowork]: {
     id: 'yd_cowork',
     nameTag: 'WeSight',
@@ -151,6 +169,8 @@ const getConfigSource = (config: CoworkConfig): ExternalAgentConfigSource | null
   if (config.agentEngine === CoworkAgentEngine.GrokBuild) return ExternalAgentConfigSource.LocalCli;
   if (config.agentEngine === CoworkAgentEngine.QwenCode) return config.qwenCodeConfigSource;
   if (config.agentEngine === CoworkAgentEngine.DeepSeekTui) return config.deepseekTuiConfigSource;
+  if (config.agentEngine === CoworkAgentEngine.OpenSquilla) return config.opensquillaConfigSource;
+  if (config.agentEngine === CoworkAgentEngine.KimiCode) return config.kimiCodeConfigSource;
   if (config.agentEngine === CoworkAgentEngine.OpenClaw) return config.openclawConfigSource;
   return null;
 };

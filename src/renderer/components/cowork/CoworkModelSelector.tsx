@@ -76,6 +76,18 @@ const resolveLocalCliAppType = (
   ) {
     return 'deepseek_tui';
   }
+  if (
+    effectiveEngine === CoworkAgentEngine.OpenSquilla
+    && config.opensquillaConfigSource === ExternalAgentConfigSource.LocalCli
+  ) {
+    return 'opensquilla';
+  }
+  if (
+    effectiveEngine === CoworkAgentEngine.KimiCode
+    && config.kimiCodeConfigSource === ExternalAgentConfigSource.LocalCli
+  ) {
+    return 'kimi';
+  }
   return null;
 };
 

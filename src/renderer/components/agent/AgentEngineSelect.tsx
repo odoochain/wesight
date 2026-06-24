@@ -4,12 +4,14 @@ import React from 'react';
 import { i18nService } from '../../services/i18n';
 
 const ENGINE_OPTIONS: CoworkAgentEngineType[] = [
-  CoworkAgentEngine.YdCowork,
   CoworkAgentEngine.ClaudeCode,
   CoworkAgentEngine.Codex,
   CoworkAgentEngine.CodexApp,
   CoworkAgentEngine.OpenClaw,
   CoworkAgentEngine.Hermes,
+  CoworkAgentEngine.OpenSquilla,
+  CoworkAgentEngine.KimiCode,
+  CoworkAgentEngine.YdCowork,
   CoworkAgentEngine.OpenCode,
   CoworkAgentEngine.GrokBuild,
   CoworkAgentEngine.QwenCode,
@@ -28,6 +30,10 @@ export const getAgentEngineLabel = (engine: CoworkAgentEngineType): string => {
       return i18nService.t('coworkAgentEngineOpenClaw');
     case CoworkAgentEngine.Hermes:
       return i18nService.t('coworkAgentEngineHermes');
+    case CoworkAgentEngine.OpenSquilla:
+      return i18nService.t('coworkAgentEngineOpenSquilla');
+    case CoworkAgentEngine.KimiCode:
+      return i18nService.t('coworkAgentEngineKimiCode');
     case CoworkAgentEngine.OpenCode:
       return i18nService.t('coworkAgentEngineOpenCode');
     case CoworkAgentEngine.GrokBuild:

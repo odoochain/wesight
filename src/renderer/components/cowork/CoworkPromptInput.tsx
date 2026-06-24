@@ -20,6 +20,7 @@ import ClaudePermissionModeSelector from './ClaudePermissionModeSelector';
 import CoworkEngineSelector from './CoworkEngineSelector';
 import CoworkModelSelector from './CoworkModelSelector';
 import FolderSelectorPopover from './FolderSelectorPopover';
+import KimiPermissionModeSelector from './KimiPermissionModeSelector';
 
 // CoworkAttachment is aliased from the Redux-persisted DraftAttachment type
 // so that attachment state survives view switches (cowork ↔ skills, etc.)
@@ -69,6 +70,7 @@ const getSlashCommandsForEngine = (engine: CoworkAgentEngine | undefined): Slash
     || engine === CoworkAgentEngine.GrokBuild
     || engine === CoworkAgentEngine.QwenCode
     || engine === CoworkAgentEngine.DeepSeekTui
+    || engine === CoworkAgentEngine.KimiCode
   ) {
     return SUPPORTED_COWORK_SLASH_COMMANDS;
   }
@@ -184,6 +186,7 @@ interface CoworkPromptInputProps {
   effectiveEngine?: CoworkAgentEngine;
   showModelSelector?: boolean;
   modelSelectorReadOnly?: boolean;
+  runtimeSelectorDropdownDirection?: 'up' | 'down';
   lockedRuntimeSnapshot?: CoworkSessionRuntimeSnapshot | null;
   onManageSkills?: () => void;
   onSlashCommand?: CoworkSlashCommandHandler;
@@ -209,6 +212,7 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
       effectiveEngine,
       showModelSelector = false,
       modelSelectorReadOnly = false,
+      runtimeSelectorDropdownDirection = 'up',
       lockedRuntimeSnapshot = null,
       onManageSkills,
       onSlashCommand,
@@ -572,12 +576,13 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
 
   const addImageAttachmentFromDataUrl = useCallback((name: string, dataUrl: string) => {
     // Use the dataUrl as the unique key (no file path for inline images)
-    const pseudoPath = `inline:${name}:${Date.now()}`;
+    const displayName = name.trim() || 'pasted-image.png';
+    const pseudoPath = `inline:${displayName}:${Date.now()}`;
     dispatch(addDraftAttachment({
       draftKey,
       attachment: {
         path: pseudoPath,
-        name,
+        name: displayName,
         isImage: true,
         dataUrl,
       },
@@ -677,10 +682,15 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
             // Fallback: add as regular file attachment
             addAttachment(nativePath);
           } else {
-            // No native path (clipboard/drag from browser) - read via FileReader
+            // No native path (clipboard/drag from browser): stage a real file so agent tools can read it.
             try {
               const dataUrl = await fileToDataUrl(file);
-              addImageAttachmentFromDataUrl(file.name, dataUrl);
+              const stagedPath = await saveInlineFile(file);
+              if (stagedPath) {
+                addAttachment(stagedPath, { isImage: true, dataUrl });
+              } else {
+                addImageAttachmentFromDataUrl(file.name, dataUrl);
+              }
             } catch (error) {
               console.error('Failed to read image from clipboard:', error);
               const stagedPath = await saveInlineFile(file);
@@ -818,11 +828,15 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
     || lockedRuntimeSnapshot?.modelName
     || lockedRuntimeSnapshot?.modelId
     || i18nService.t('coworkAgentLocalModelUnknown');
-  const lockedPermissionLabel = lockedRuntimeSnapshot?.permissionMode
-    ? i18nService.t(`coworkAgentClaudeCodePermissionMode_${lockedRuntimeSnapshot.permissionMode}`)
-    : lockedRuntimeSnapshot?.permissionModeLabel;
+  const lockedPermissionLabel = lockedRuntimeSnapshot?.permissionModeLabel
+    || (lockedRuntimeSnapshot?.permissionMode
+      ? i18nService.t(`coworkAgentClaudeCodePermissionMode_${lockedRuntimeSnapshot.permissionMode}`)
+      : null);
   const shouldShowClaudePermissionSelector = !runtimeLocked
     && selectorEngine === CoworkAgentEngine.ClaudeCode
+    && !remoteManaged;
+  const shouldShowKimiPermissionSelector = !runtimeLocked
+    && selectorEngine === CoworkAgentEngine.KimiCode
     && !remoteManaged;
   const renderRuntimeSelectors = () => {
     if (remoteManaged) return null;
@@ -844,7 +858,7 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
           )}
           {showModelSelector && (
             <CoworkModelSelector
-              dropdownDirection="up"
+              dropdownDirection={runtimeSelectorDropdownDirection}
               effectiveEngine={lockedRuntimeSnapshot?.agentEngine}
             />
           )}
@@ -855,13 +869,19 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
       <div className="flex min-w-0 items-center gap-1.5">
         {shouldShowClaudePermissionSelector && (
           <ClaudePermissionModeSelector
-            dropdownDirection="up"
+            dropdownDirection={runtimeSelectorDropdownDirection}
+            disabled={disabled || isStreaming}
+          />
+        )}
+        {shouldShowKimiPermissionSelector && (
+          <KimiPermissionModeSelector
+            dropdownDirection={runtimeSelectorDropdownDirection}
             disabled={disabled || isStreaming}
           />
         )}
         {showEngineSelector && (
           <CoworkEngineSelector
-            dropdownDirection="up"
+            dropdownDirection={runtimeSelectorDropdownDirection}
             value={selectorEngine}
             readOnly={engineSelectorReadOnly}
             readOnlyTitle={i18nService.t('coworkAgentEngineReadOnly')}
@@ -869,7 +889,7 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
         )}
         {showModelSelector && (
           <CoworkModelSelector
-            dropdownDirection="up"
+            dropdownDirection={runtimeSelectorDropdownDirection}
             readOnly={modelSelectorReadOnly}
             effectiveEngine={selectorEngine}
           />

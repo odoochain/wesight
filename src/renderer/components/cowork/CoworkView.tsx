@@ -87,6 +87,14 @@ const usesLocalCliModelConfigForEngine = (
     engine === CoworkAgentEngine.DeepSeekTui
     && config.deepseekTuiConfigSource === ExternalAgentConfigSource.LocalCli
   )
+  || (
+    engine === CoworkAgentEngine.OpenSquilla
+    && config.opensquillaConfigSource === ExternalAgentConfigSource.LocalCli
+  )
+  || (
+    engine === CoworkAgentEngine.KimiCode
+    && config.kimiCodeConfigSource === ExternalAgentConfigSource.LocalCli
+  )
 );
 
 const shouldRequireWesightModelConfig = (engine?: CoworkAgentEngine): boolean => (
@@ -105,6 +113,8 @@ const getCliAppTypeForEngine = (engine: CoworkAgentEngine): ExternalAgentProvide
   if (engine === CoworkAgentEngine.GrokBuild) return 'grok';
   if (engine === CoworkAgentEngine.QwenCode) return 'qwen';
   if (engine === CoworkAgentEngine.DeepSeekTui) return 'deepseek_tui';
+  if (engine === CoworkAgentEngine.OpenSquilla) return 'opensquilla';
+  if (engine === CoworkAgentEngine.KimiCode) return 'kimi';
   return null;
 };
 
@@ -129,6 +139,8 @@ const getEngineLabelKey = (engine: CoworkAgentEngine): string => {
   if (engine === CoworkAgentEngine.GrokBuild) return 'coworkAgentEngineGrokBuild';
   if (engine === CoworkAgentEngine.QwenCode) return 'coworkAgentEngineQwenCode';
   if (engine === CoworkAgentEngine.DeepSeekTui) return 'coworkAgentEngineDeepSeekTui';
+  if (engine === CoworkAgentEngine.OpenSquilla) return 'coworkAgentEngineOpenSquilla';
+  if (engine === CoworkAgentEngine.KimiCode) return 'coworkAgentEngineKimiCode';
   if (engine === CoworkAgentEngine.CodexApp) return 'coworkAgentEngineCodexApp';
   return 'coworkAgentEngineClaudeLegacy';
 };
@@ -613,6 +625,10 @@ const CoworkView: React.FC<CoworkViewProps> = ({ onRequestAppSettings, onShowSki
         return i18nService.t('coworkAgentEngineQwenCode');
       case CoworkAgentEngine.DeepSeekTui:
         return i18nService.t('coworkAgentEngineDeepSeekTui');
+      case CoworkAgentEngine.OpenSquilla:
+        return i18nService.t('coworkAgentEngineOpenSquilla');
+      case CoworkAgentEngine.KimiCode:
+        return i18nService.t('coworkAgentEngineKimiCode');
       case CoworkAgentEngine.OpenClaw:
         return i18nService.t('coworkAgentEngineOpenClaw');
       case CoworkAgentEngine.Hermes:
@@ -782,6 +798,18 @@ const CoworkView: React.FC<CoworkViewProps> = ({ onRequestAppSettings, onShowSki
     if (
       selectedRuntimeEngine === CoworkAgentEngine.DeepSeekTui
       && config.deepseekTuiConfigSource === ExternalAgentConfigSource.LocalCli
+    ) {
+      return i18nService.t('coworkAgentConfigSourceLocalCli');
+    }
+    if (
+      selectedRuntimeEngine === CoworkAgentEngine.OpenSquilla
+      && config.opensquillaConfigSource === ExternalAgentConfigSource.LocalCli
+    ) {
+      return i18nService.t('coworkAgentConfigSourceLocalCli');
+    }
+    if (
+      selectedRuntimeEngine === CoworkAgentEngine.KimiCode
+      && config.kimiCodeConfigSource === ExternalAgentConfigSource.LocalCli
     ) {
       return i18nService.t('coworkAgentConfigSourceLocalCli');
     }
@@ -1135,6 +1163,7 @@ const CoworkView: React.FC<CoworkViewProps> = ({ onRequestAppSettings, onShowSki
                 engineSelectorReadOnly={!canSelectRuntimeEngine}
                 showModelSelector={true}
                 modelSelectorReadOnly={!canSelectRuntimeEngine}
+                runtimeSelectorDropdownDirection="down"
                 onManageSkills={() => onShowSkills?.()}
               />
             </div>
