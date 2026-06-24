@@ -5,6 +5,7 @@ export { default as GeminiIcon } from './GeminiIcon';
 export { default as GitHubCopilotIcon } from './GitHubCopilotIcon';
 export { default as MiniMaxIcon } from './MiniMaxIcon';
 export { default as MoonshotIcon } from './MoonshotIcon';
+export { default as LawPaddleChainIcon } from './LawPaddleChainIcon';
 export { default as OllamaIcon } from './OllamaIcon';
 export { default as OpenAIIcon } from './OpenAIIcon';
 export { default as OpenRouterIcon } from './OpenRouterIcon';

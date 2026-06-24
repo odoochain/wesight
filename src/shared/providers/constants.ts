@@ -37,6 +37,9 @@ export const ProviderName = {
   Volcengine: 'volcengine',
   OpenRouter: 'openrouter',
   Ollama: 'ollama',
+  Custom: 'custom',
+  WesightServer: 'wesight-server',
+  Copilot: 'github-copilot',
   LawPaddleChain: 'lawpaddle-chain',
 } as const;
 export type ProviderName = typeof ProviderName[keyof typeof ProviderName];
