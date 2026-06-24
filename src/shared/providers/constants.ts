@@ -37,9 +37,7 @@ export const ProviderName = {
   Volcengine: 'volcengine',
   OpenRouter: 'openrouter',
   Ollama: 'ollama',
-  Custom: 'custom',
-  WesightServer: 'wesight-server',
-  Copilot: 'github-copilot',
+  LawPaddleChain: 'lawpaddle-chain',
 } as const;
 export type ProviderName = typeof ProviderName[keyof typeof ProviderName];
 
@@ -64,6 +62,7 @@ export const OpenClawProviderId = {
   WesightCopilot: 'wesight-copilot',
   Ollama: 'ollama',
   Wesight: 'wesight',
+  LawPaddleChain: 'lawpaddle-chain',
 } as const;
 export type OpenClawProviderId = typeof OpenClawProviderId[keyof typeof OpenClawProviderId];
 
@@ -354,6 +353,19 @@ const PROVIDER_DEFINITIONS = [
     defaultModels: [
       { id: 'qwen3-coder-next', name: 'Qwen3-Coder-Next', supportsImage: false },
       { id: 'glm-4.7-flash', name: 'GLM 4.7 Flash', supportsImage: false },
+    ],
+  },
+  {
+    id: ProviderName.LawPaddleChain,
+    openClawProviderId: OpenClawProviderId.LawPaddleChain,
+    defaultBaseUrl: 'http://localhost:8787',
+    defaultApiFormat: ApiFormat.Anthropic,
+    codingPlanSupported: false,
+    region: 'china',
+    enPriority: 0,
+    defaultModels: [
+      { id: 'auto', name: 'Auto (free pool + deepseek backstop)', supportsImage: false },
+      { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro (paid)', supportsImage: false },
     ],
   },
   // ── Global ──
