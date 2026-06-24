@@ -105,7 +105,7 @@ import {
   refreshCopilotTokenNow,
   setCopilotTokenState,
 } from './libs/copilotTokenManager';
-import { saveCoworkApiConfig } from './libs/coworkConfigStore';
+import { loadCoworkApiConfig, saveCoworkApiConfig } from './libs/coworkConfigStore';
 import { getCoworkLogPath } from './libs/coworkLogger';
 import { registerProxyTokenRefresher,startCoworkOpenAICompatProxy, stopCoworkOpenAICompatProxy } from './libs/coworkOpenAICompatProxy';
 import { CoworkRunner } from './libs/coworkRunner';
@@ -2783,10 +2783,21 @@ const getIMGatewayManager = () => {
     // Initialize with LLM config provider
     imGatewayManager.initialize({
       getLLMConfig: async () => {
+        // 1. Prefer api-config.json (Cowork Chat config — points to lawPaddle chain)
+        const coworkConfig = loadCoworkApiConfig();
+        if (coworkConfig?.apiKey && coworkConfig?.baseURL) {
+          return {
+            apiKey: coworkConfig.apiKey,
+            baseUrl: coworkConfig.baseURL,
+            model: coworkConfig.model || 'auto',
+            provider: 'cowork-config',
+          };
+        }
+
+        // 2. Fallback to app_config providers (Settings UI)
         const appConfig = sqliteStore.get<AppConfigForIm>('app_config');
         if (!appConfig) return null;
 
-        // Find first enabled provider
         const providers = appConfig.providers || {};
         for (const [providerName, providerConfig] of Object.entries(providers)) {
           if (providerConfig.enabled && providerConfig.apiKey) {
@@ -2800,7 +2811,7 @@ const getIMGatewayManager = () => {
           }
         }
 
-        // Fallback to legacy api config
+        // 3. Fallback to legacy api config
         if (appConfig.api?.key) {
           return {
             apiKey: appConfig.api.key,
