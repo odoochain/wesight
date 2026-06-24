@@ -70,6 +70,7 @@ import {
   DeepSeekIcon,
   GeminiIcon,
   GitHubCopilotIcon,
+  LawPaddleChainIcon,
   MiniMaxIcon,
   MoonshotIcon,
   OllamaIcon,
@@ -318,6 +319,7 @@ const providerMeta: Record<ProviderType, { label: string; icon: React.ReactNode 
   openrouter: { label: 'OpenRouter', icon: <OpenRouterIcon /> },
   'github-copilot': { label: 'GitHub Copilot', icon: <GitHubCopilotIcon /> },
   ollama: { label: 'Ollama', icon: <OllamaIcon /> },
+  'lawpaddle-chain': { label: 'LawPaddle Chain', icon: <LawPaddleChainIcon /> },
   ...Object.fromEntries(
     CUSTOM_PROVIDER_KEYS.map(key => [key, { label: getCustomProviderDefaultName(key), icon: <CustomProviderIcon /> }])
   ) as Record<(typeof CUSTOM_PROVIDER_KEYS)[number], { label: string; icon: React.ReactNode }>,
