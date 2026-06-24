@@ -12,6 +12,8 @@ dist-electron
 __pycache__/
 .codebuddy/
 .codegraph/
+electron.log
+vite.log
 .work/
 .idea/
 vendor/openclaw-runtime/
