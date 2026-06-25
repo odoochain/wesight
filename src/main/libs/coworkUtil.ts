@@ -636,6 +636,12 @@ export function ensureElectronNodeShim(electronPath: string, npmBinDir?: string)
  * Priority: env var override > bundled PortableGit > installed Git > PATH lookup.
  * Every candidate must pass a health check (`cygpath -u`) before use.
  */
+function isWslStubBashPath(bashPath: string): boolean {
+  const lower = normalizeWindowsPath(bashPath).toLowerCase();
+  const systemRoot = (process.env.SYSTEMROOT || process.env.SystemRoot || 'C:\\Windows').toLowerCase();
+  return lower.startsWith(systemRoot + '\\system32\\') || lower.startsWith(systemRoot + '\\syswow64\\');
+}
+
 function resolveWindowsGitBashPath(): string | null {
   if (cachedGitBashPath !== undefined) return cachedGitBashPath;
 
@@ -705,7 +711,7 @@ function resolveWindowsGitBashPath(): string | null {
   // 5. Try `where bash`
   const bashPaths = listWindowsCommandPaths('where bash');
   for (const bashPath of bashPaths) {
-    if (bashPath.toLowerCase().endsWith('\\bash.exe')) {
+    if (bashPath.toLowerCase().endsWith('\\bash.exe') && !isWslStubBashPath(bashPath)) {
       pushCandidate(bashPath, 'path:where bash');
     }
   }
