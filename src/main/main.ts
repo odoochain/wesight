@@ -5574,6 +5574,22 @@ if (!gotTheLock) {
     }
   });
 
+  ipcMain.handle(CoworkIpcChannel.HeadroomStats, async () => {
+    try {
+      const response = await fetch('http://localhost:8787/stats', { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) {
+        return { success: false, error: `Headroom returned ${response.status}` };
+      }
+      const stats = await response.json();
+      return { success: true, stats };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch headroom stats',
+      };
+    }
+  });
+
   ipcMain.handle(CoworkIpcChannel.PerformanceRendererReady, async (_event, input: {
     firstPaintMs?: unknown;
     firstInteractiveMs?: unknown;

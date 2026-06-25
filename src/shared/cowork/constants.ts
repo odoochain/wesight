@@ -331,7 +331,18 @@ export const CoworkIpcChannel = {
   RuntimeMetricsSummary: 'cowork:runtimeMetrics:summary',
   RuntimeMetricsCalls: 'cowork:runtimeMetrics:calls',
   RuntimeMetricsDetail: 'cowork:runtimeMetrics:detail',
+  HeadroomStats: 'headroom:stats:get',
   CodexAppTasksSync: 'codexApp:tasks:sync',
   CodexAppTaskOpen: 'codexApp:tasks:open',
 } as const;
 export type CoworkIpcChannel = typeof CoworkIpcChannel[keyof typeof CoworkIpcChannel];
+
+/** Subset of headroom /stats consumed by the runtime dashboard (all optional — headroom may omit fields). */
+export interface HeadroomStats {
+  summary?: { api_requests?: number };
+  requests?: { failed?: number };
+  tokens?: { input?: number; saved?: number };
+  cost?: { total_input_cost_usd?: number; savings_usd?: number };
+  latency?: { average_ms?: number };
+  overhead?: { average_ms?: number };
+}
