@@ -1,5 +1,5 @@
 import { EyeIcon, EyeSlashIcon, XCircleIcon as XCircleIconSolid } from '@heroicons/react/20/solid';
-import { ArrowPathIcon, ArrowTopRightOnSquareIcon,ChatBubbleLeftIcon, CheckCircleIcon, ClockIcon, Cog6ToothIcon, CommandLineIcon, CpuChipIcon, CubeIcon, EnvelopeIcon, InformationCircleIcon, SignalIcon, UserCircleIcon, UserGroupIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, ArrowTopRightOnSquareIcon,ChatBubbleLeftIcon, CheckCircleIcon, ClockIcon, Cog6ToothIcon, CommandLineIcon, CpuChipIcon, CubeIcon, EnvelopeIcon, InformationCircleIcon, ServerStackIcon, SignalIcon, UserCircleIcon, UserGroupIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import {
   ClaudeCodePermissionMode as ClaudeCodePermissionModeValue,
   CoworkAgentEngine as CoworkAgentEngineValue,
@@ -84,6 +84,7 @@ import {
   ZhipuIcon,
 } from './icons/providers';
 import TrashIcon from './icons/TrashIcon';
+import FreeLLMApiPanel from './FreeLLMApiPanel';
 import IMSettings from './im/IMSettings';
 import McpManager from './mcp/McpManager';
 import PetSprite, { PetMood } from './pet/PetSprite';
@@ -91,7 +92,7 @@ import { ScheduledTasksView } from './scheduledTasks';
 import EmailSkillConfig from './skills/EmailSkillConfig';
 import ThemedSelect from './ui/ThemedSelect';
 
-type TabType = 'general'| 'coworkAgentEngine' | 'model' | 'coworkMemory' | 'coworkAgent' | 'agents' | 'shortcuts' | 'im' | 'email' | 'scheduledTasks' | 'mcp' | 'about';
+type TabType = 'general'| 'coworkAgentEngine' | 'model' | 'coworkMemory' | 'coworkAgent' | 'agents' | 'shortcuts' | 'im' | 'email' | 'scheduledTasks' | 'mcp' | 'freellmapi' | 'about';
 
 const COWORK_AGENT_ENGINE_OPTIONS: Array<{
   value: CoworkAgentEngine;
@@ -3105,6 +3106,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
       { key: 'coworkAgent' as TabType,    label: tabLabel('coworkAgentTab'),    icon: <UserCircleIcon className="h-5 w-5" /> },
       { key: 'agents' as TabType,         label: tabLabel('agentManagement'), icon: <UserGroupIcon className="h-5 w-5" /> },
       { key: 'shortcuts' as TabType,      label: tabLabel('shortcuts'),      icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5"><rect x="2" y="4" width="20" height="14" rx="2" /><line x1="6" y1="8" x2="8" y2="8" /><line x1="10" y1="8" x2="12" y2="8" /><line x1="14" y1="8" x2="16" y2="8" /><line x1="6" y1="12" x2="8" y2="12" /><line x1="10" y1="12" x2="14" y2="12" /><line x1="16" y1="12" x2="18" y2="12" /><line x1="8" y1="15.5" x2="16" y2="15.5" /></svg> },
+      { key: 'freellmapi' as TabType,     label: 'FreeLLMAPI',            icon: <ServerStackIcon className="h-5 w-5" /> },
       { key: 'about' as TabType,          label: tabLabel('about'),          icon: <InformationCircleIcon className="h-5 w-5" /> },
     ];
     // Filter out tabs hidden by enterprise config
@@ -6377,6 +6379,9 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
       case 'mcp':
         return <McpManager />;
 
+      case 'freellmapi':
+        return <FreeLLMApiPanel />;
+
       case 'agents':
         return <AgentsView embedded />;
 
@@ -6552,8 +6557,8 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
     onClose();
   };
 
-  const isEmbeddedToolTab = activeTab === 'scheduledTasks' || activeTab === 'mcp' || activeTab === 'agents';
-  const isFullHeightTab = activeTab === 'scheduledTasks' || activeTab === 'agents';
+  const isEmbeddedToolTab = activeTab === 'scheduledTasks' || activeTab === 'mcp' || activeTab === 'agents' || activeTab === 'freellmapi';
+  const isFullHeightTab = activeTab === 'scheduledTasks' || activeTab === 'agents' || activeTab === 'freellmapi';
   const contentClassName = isFullHeightTab
     ? 'p-0 flex-1 overflow-hidden'
     : 'px-6 py-4 flex-1 overflow-y-auto';
