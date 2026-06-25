@@ -108,6 +108,17 @@ const INSTALL_TARGETS: Record<CliAppType, InstallTarget> = {
       },
     ],
   },
+  mimo_code: {
+    appType: 'mimo_code',
+    displayName: 'MiMoCode',
+    command: 'mimo',
+    methods: [
+      {
+        id: 'npm',
+        packageName: '@anthropic-ai/claude-code',
+      },
+    ],
+  },
   grok: {
     appType: 'grok',
     displayName: 'Grok Build',
