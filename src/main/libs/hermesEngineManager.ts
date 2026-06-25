@@ -524,7 +524,8 @@ export class HermesEngineManager extends EventEmitter {
         `\\\\wsl$\\Ubuntu\\home\\${userName}\\.local\\bin\\hermes`,
         `\\\\wsl$\\Ubuntu\\home\\${userName}\\.hermes\\bin\\hermes`,
       ] : []),
-    ].filter((value): value is string => Boolean(value));
+    ].filter((value): value is string => Boolean(value))
+      .filter(candidate => !/^\\\\/.test(candidate));
     const commandPath = findPath(candidates);
     const expectedPathHint = [
       'PATH:hermes',
