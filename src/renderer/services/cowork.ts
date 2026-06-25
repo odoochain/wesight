@@ -1,4 +1,4 @@
-import { CoworkAgentEngine } from '@shared/cowork/constants';
+import { CoworkAgentEngine, type HeadroomStats } from '@shared/cowork/constants';
 
 import { classifyErrorKey } from '../../common/coworkErrorClassify';
 import { store } from '../store';
@@ -865,6 +865,16 @@ class CoworkService {
       return null;
     }
     return result.call ?? null;
+  }
+
+  async getHeadroomStats(): Promise<HeadroomStats | null> {
+    const api = window.electron?.cowork?.getHeadroomStats;
+    if (!api) return null;
+    const result = await api();
+    if (!result?.success) {
+      return null;
+    }
+    return (result.stats as HeadroomStats) ?? null;
   }
 
   async ensureStudioAssets() {

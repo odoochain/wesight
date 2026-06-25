@@ -709,6 +709,7 @@ interface IElectronAPI {
     getRuntimeMetricsSummary: (filters: RuntimeMetricsFilters) => Promise<{ success: boolean; summary?: RuntimeMetricsSummary; error?: string }>;
     listRuntimeCalls: (filters: RuntimeMetricsFilters) => Promise<{ success: boolean; total?: number; calls?: RuntimeCallRecord[]; error?: string }>;
     getRuntimeCallDetail: (callId: string) => Promise<{ success: boolean; call?: RuntimeCallRecord | null; error?: string }>;
+    getHeadroomStats: () => Promise<{ success: boolean; stats?: any; error?: string }>;
     reportRendererReady: (input: {
       firstPaintMs?: number;
       firstInteractiveMs?: number;

@@ -369,6 +369,8 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.invoke(CoworkIpcChannel.RuntimeMetricsCalls, filters),
     getRuntimeCallDetail: (callId: string) =>
       ipcRenderer.invoke(CoworkIpcChannel.RuntimeMetricsDetail, { callId }),
+    getHeadroomStats: () =>
+      ipcRenderer.invoke(CoworkIpcChannel.HeadroomStats),
     reportRendererReady: (input: {
       firstPaintMs?: number;
       firstInteractiveMs?: number;

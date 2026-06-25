@@ -34,6 +34,7 @@ import {
 } from 'recharts';
 
 import { coworkService } from '../../services/cowork';
+import type { HeadroomStats } from '@shared/cowork/constants';
 import { i18nService } from '../../services/i18n';
 import type { RootState } from '../../store';
 import type {
@@ -253,6 +254,7 @@ const RuntimeDashboardView: React.FC<RuntimeDashboardViewProps> = ({
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [selectedCall, setSelectedCall] = useState<RuntimeCallRecord | null>(null);
+  const [headroomStats, setHeadroomStats] = useState<HeadroomStats | null>(null);
   const localCliAppType = useMemo(
     () => resolveLocalCliAppType(engine, coworkConfig),
     [coworkConfig, engine],
@@ -360,15 +362,17 @@ const RuntimeDashboardView: React.FC<RuntimeDashboardViewProps> = ({
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextSummary, nextCalls, nextModelOptionsSummary] = await Promise.all([
+      const [nextSummary, nextCalls, nextModelOptionsSummary, nextHeadroomStats] = await Promise.all([
         coworkService.getRuntimeMetricsSummary(filters),
         coworkService.listRuntimeCalls(filters),
         coworkService.getRuntimeMetricsSummary(modelOptionFilters),
+        coworkService.getHeadroomStats(),
       ]);
       setSummary(nextSummary);
       setModelOptionsSummary(nextModelOptionsSummary);
       setCalls(nextCalls.calls);
       setTotal(nextCalls.total);
+      setHeadroomStats(nextHeadroomStats);
     } finally {
       setLoading(false);
     }
@@ -429,6 +433,29 @@ const RuntimeDashboardView: React.FC<RuntimeDashboardViewProps> = ({
       value: formatCost(summary?.estimatedCostUsd),
       hint: i18nService.t('runtimeDashboardCostHint'),
     },
+    // Headroom compression stats
+    ...(headroomStats ? [
+      {
+        label: 'Headroom Requests',
+        value: formatNumber(headroomStats.summary?.api_requests ?? 0),
+        hint: `Failed: ${formatNumber(headroomStats.requests?.failed ?? 0)}`,
+      },
+      {
+        label: 'Headroom Tokens In',
+        value: formatNumber(headroomStats.tokens?.input ?? 0),
+        hint: `Saved: ${formatNumber(headroomStats.tokens?.saved ?? 0)}`,
+      },
+      {
+        label: 'Headroom Cost',
+        value: formatCost(headroomStats.cost?.total_input_cost_usd ?? 0),
+        hint: `Saved: ${formatCost(headroomStats.cost?.savings_usd ?? 0)}`,
+      },
+      {
+        label: 'Headroom Latency',
+        value: formatDuration(headroomStats.latency?.average_ms ?? 0),
+        hint: `Overhead: ${formatDuration(headroomStats.overhead?.average_ms ?? 0)}`,
+      },
+    ] : []),
   ];
 
   const timeSeries = (summary?.timeSeries ?? []).map((point) => ({
