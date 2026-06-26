@@ -17,6 +17,7 @@ export const CoworkAgentEngine = {
   DeepSeekTui: 'deepseek_tui',
   OpenSquilla: 'opensquilla',
   KimiCode: 'kimi_code',
+  MiMoCode: 'mimo_code',
 } as const;
 
 export type CoworkAgentEngine = typeof CoworkAgentEngine[keyof typeof CoworkAgentEngine];
@@ -36,6 +37,7 @@ export const CoworkAgentEngineValues = [
   CoworkAgentEngine.DeepSeekTui,
   CoworkAgentEngine.OpenSquilla,
   CoworkAgentEngine.KimiCode,
+  CoworkAgentEngine.MiMoCode,
 ] as const;
 
 export const CliCoworkAgentEngines = [
@@ -49,6 +51,7 @@ export const CliCoworkAgentEngines = [
   CoworkAgentEngine.DeepSeekTui,
   CoworkAgentEngine.OpenSquilla,
   CoworkAgentEngine.KimiCode,
+  CoworkAgentEngine.MiMoCode,
 ] as const;
 
 export type CliCoworkAgentEngine = typeof CliCoworkAgentEngines[number];
@@ -147,6 +150,18 @@ export const KimiCodePermissionModeValues = [
   KimiCodePermissionMode.Plan,
 ] as const;
 
+export const MiMoCodePermissionMode = {
+  Auto: 'auto',
+  Conservative: 'conservative',
+} as const;
+
+export type MiMoCodePermissionMode = typeof MiMoCodePermissionMode[keyof typeof MiMoCodePermissionMode];
+
+export const MiMoCodePermissionModeValues = [
+  MiMoCodePermissionMode.Auto,
+  MiMoCodePermissionMode.Conservative,
+] as const;
+
 export function isCoworkAgentEngine(value: unknown): value is CoworkAgentEngine {
   return typeof value === 'string'
     && CoworkAgentEngineValues.includes(value as CoworkAgentEngine);
@@ -185,6 +200,11 @@ export function isOpenSquillaPermissionMode(value: unknown): value is OpenSquill
 export function isKimiCodePermissionMode(value: unknown): value is KimiCodePermissionMode {
   return typeof value === 'string'
     && KimiCodePermissionModeValues.includes(value as KimiCodePermissionMode);
+}
+
+export function isMiMoCodePermissionMode(value: unknown): value is MiMoCodePermissionMode {
+  return typeof value === 'string'
+    && MiMoCodePermissionModeValues.includes(value as MiMoCodePermissionMode);
 }
 
 export function isCliCoworkAgentEngine(value: unknown): value is CliCoworkAgentEngine {
