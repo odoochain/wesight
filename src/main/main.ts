@@ -801,6 +801,7 @@ let grokBuildRuntimeAdapter: ExternalCliRuntimeAdapter | null = null;
 let qwenCodeRuntimeAdapter: ExternalCliRuntimeAdapter | null = null;
 let openSquillaRuntimeAdapter: ExternalCliRuntimeAdapter | null = null;
 let kimiCodeRuntimeAdapter: ExternalCliRuntimeAdapter | null = null;
+let mimoCodeRuntimeAdapter: ExternalCliRuntimeAdapter | null = null;
 let deepSeekTuiRuntimeManager: DeepSeekTuiRuntimeManager | null = null;
 let deepSeekTuiRuntimeAdapter: DeepSeekTuiRuntimeAdapter | null = null;
 let coworkEngineRouter: CoworkEngineRouter | null = null;
@@ -1243,6 +1244,7 @@ const getConfigSourceForEngine = (engine: CoworkAgentEngine): string | null => {
   if (engine === CoworkAgentEngineValue.DeepSeekTui) return config.deepseekTuiConfigSource;
   if (engine === CoworkAgentEngineValue.OpenSquilla) return config.opensquillaConfigSource;
   if (engine === CoworkAgentEngineValue.KimiCode) return config.kimiCodeConfigSource;
+  if (engine === CoworkAgentEngineValue.MiMoCode) return config.opencodeConfigSource;
   return ExternalAgentConfigSource.WesightModel;
 };
 
@@ -1258,6 +1260,7 @@ const getExternalProviderAppTypeForEngine = (
   if (engine === CoworkAgentEngineValue.DeepSeekTui) return 'deepseek_tui';
   if (engine === CoworkAgentEngineValue.OpenSquilla) return 'opensquilla';
   if (engine === CoworkAgentEngineValue.KimiCode) return 'kimi';
+  if (engine === CoworkAgentEngineValue.MiMoCode) return 'mimo_code';
   return null;
 };
 
@@ -1336,6 +1339,7 @@ const getEngineSnapshotLabel = (engine: CoworkAgentEngine): string => {
   if (engine === CoworkAgentEngineValue.DeepSeekTui) return 'DeepSeek-TUI';
   if (engine === CoworkAgentEngineValue.OpenSquilla) return 'OpenSquilla';
   if (engine === CoworkAgentEngineValue.KimiCode) return 'Kimi Code';
+  if (engine === CoworkAgentEngineValue.MiMoCode) return 'MiMo-Code';
   return 'Cowork';
 };
 
@@ -1726,6 +1730,10 @@ const applyExternalAgentConfigSourceForEngine = (engine: CoworkAgentEngine): voi
   }
   if (engine === CoworkAgentEngineValue.KimiCode) {
     applyExternalAgentConfigForEngine(engine, config.kimiCodeConfigSource);
+    return;
+  }
+  if (engine === CoworkAgentEngineValue.MiMoCode) {
+    applyExternalAgentConfigForEngine(engine, config.opencodeConfigSource);
   }
 };
 
@@ -1791,6 +1799,7 @@ const isExternalAgentProviderAppType = (value: unknown): value is ExternalAgentP
   || value === 'hermes'
   || value === 'openclaw'
   || value === 'opencode'
+  || value === 'mimo_code'
   || value === 'grok'
   || value === 'qwen'
   || value === 'deepseek_tui'
@@ -2401,6 +2410,13 @@ const getCoworkEngineRouter = () => {
         getCurrentProvider: (appType) => getExternalAgentProviderStore().getCurrentProvider(appType),
       });
     }
+    if (!mimoCodeRuntimeAdapter) {
+      mimoCodeRuntimeAdapter = new ExternalCliRuntimeAdapter({
+        engine: CoworkAgentEngineValue.MiMoCode,
+        store: getCoworkStore(),
+        getCurrentProvider: (appType) => getExternalAgentProviderStore().getCurrentProvider(appType),
+      });
+    }
     if (!deepSeekTuiRuntimeAdapter) {
       deepSeekTuiRuntimeAdapter = new DeepSeekTuiRuntimeAdapter({
         store: getCoworkStore(),
@@ -2429,6 +2445,7 @@ const getCoworkEngineRouter = () => {
       deepSeekTuiRuntime: deepSeekTuiRuntimeAdapter,
       openSquillaRuntime: openSquillaRuntimeAdapter,
       kimiCodeRuntime: kimiCodeRuntimeAdapter,
+      mimoCodeRuntime: mimoCodeRuntimeAdapter,
       telemetryTracker: getRuntimeTelemetryTracker(),
     });
   }
@@ -3138,6 +3155,7 @@ const getDesktopPetEngineLabel = (engine: CoworkAgentEngine): string => {
   if (engine === CoworkAgentEngineValue.DeepSeekTui) return 'DeepSeek-TUI';
   if (engine === CoworkAgentEngineValue.OpenSquilla) return 'OpenSquilla';
   if (engine === CoworkAgentEngineValue.KimiCode) return 'Kimi Code';
+  if (engine === CoworkAgentEngineValue.MiMoCode) return 'MiMo-Code';
   return 'WeSight';
 };
 
@@ -6191,7 +6209,9 @@ if (!gotTheLock) {
         || (nextConfigPreview.agentEngine === CoworkAgentEngineValue.OpenSquilla
           && (normalizedAgentEngine !== undefined || normalizedOpenSquillaConfigSource !== undefined))
         || (nextConfigPreview.agentEngine === CoworkAgentEngineValue.KimiCode
-          && (normalizedAgentEngine !== undefined || normalizedKimiCodeConfigSource !== undefined));
+          && (normalizedAgentEngine !== undefined || normalizedKimiCodeConfigSource !== undefined))
+        || (nextConfigPreview.agentEngine === CoworkAgentEngineValue.MiMoCode
+          && (normalizedAgentEngine !== undefined || normalizedOpenCodeConfigSource !== undefined));
       if (shouldApplyExternalAgentConfig) {
         const source = nextConfigPreview.agentEngine === CoworkAgentEngineValue.ClaudeCode
           ? nextConfigPreview.claudeCodeConfigSource
@@ -6199,13 +6219,15 @@ if (!gotTheLock) {
             ? nextConfigPreview.codexConfigSource
             : nextConfigPreview.agentEngine === CoworkAgentEngineValue.OpenCode
               ? nextConfigPreview.opencodeConfigSource
-              : nextConfigPreview.agentEngine === CoworkAgentEngineValue.QwenCode
-                ? nextConfigPreview.qwenCodeConfigSource
-                : nextConfigPreview.agentEngine === CoworkAgentEngineValue.DeepSeekTui
-                  ? nextConfigPreview.deepseekTuiConfigSource
-                  : nextConfigPreview.agentEngine === CoworkAgentEngineValue.OpenSquilla
-                    ? nextConfigPreview.opensquillaConfigSource
-                    : nextConfigPreview.kimiCodeConfigSource;
+              : nextConfigPreview.agentEngine === CoworkAgentEngineValue.MiMoCode
+                ? nextConfigPreview.opencodeConfigSource
+                : nextConfigPreview.agentEngine === CoworkAgentEngineValue.QwenCode
+                  ? nextConfigPreview.qwenCodeConfigSource
+                  : nextConfigPreview.agentEngine === CoworkAgentEngineValue.DeepSeekTui
+                    ? nextConfigPreview.deepseekTuiConfigSource
+                    : nextConfigPreview.agentEngine === CoworkAgentEngineValue.OpenSquilla
+                      ? nextConfigPreview.opensquillaConfigSource
+                      : nextConfigPreview.kimiCodeConfigSource;
         applyExternalAgentConfigForEngine(nextConfigPreview.agentEngine, source);
       }
       getCoworkStore().setConfig(normalizedConfig);

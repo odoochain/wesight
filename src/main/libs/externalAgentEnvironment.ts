@@ -24,7 +24,7 @@ import {
 } from './hermesConfig';
 import { readOpenClawGlobalConfig, summarizeOpenClawConfig } from './openclawSystemRuntime';
 
-export type CliAppType = 'claude' | 'codex' | 'hermes' | 'openclaw' | 'opencode' | 'grok' | 'qwen' | 'deepseek_tui' | 'opensquilla' | 'kimi';
+export type CliAppType = 'claude' | 'codex' | 'hermes' | 'openclaw' | 'opencode' | 'grok' | 'qwen' | 'deepseek_tui' | 'opensquilla' | 'kimi' | 'mimo_code';
 export type CliAuthStatus = 'unknown' | 'logged_out' | 'logged_in' | 'expired' | 'unconfigured';
 
 export interface CliAppConfigSnapshot {
@@ -550,6 +550,7 @@ const localEnvKeysByAppType: Record<CliAppType, string[]> = {
   deepseek_tui: ['DEEPSEEK_API_KEY', 'OPENAI_API_KEY'],
   opensquilla: ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'OPENROUTER_API_KEY', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'DEEPSEEK_API_KEY', 'DASHSCOPE_API_KEY', 'QWEN_API_KEY', 'MOONSHOT_API_KEY', 'ZAI_API_KEY', 'Z_AI_API_KEY'],
   kimi: ['MOONSHOT_API_KEY', 'KIMI_API_KEY'],
+  mimo_code: ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'],
 };
 
 const formatAuthSource = (filePath: string): string => (
@@ -579,7 +580,7 @@ const buildAuthPathCandidates = (
       path.join(configDir, 'auth.json'),
     ];
   }
-  if (appType === 'opencode') {
+  if (appType === 'opencode' || appType === 'mimo_code') {
     return [
       ...common,
       path.join(getOpenCodeDataDir(), 'auth.json'),
@@ -668,7 +669,7 @@ const readCurrentProviderFromDb = (
   appType: CliAppType,
   settingsCurrentProviderId: string | null,
 ): { provider: ProviderRow | null; count: number } => {
-  if (appType === 'openclaw' || appType === 'opencode' || appType === 'grok' || appType === 'qwen' || appType === 'deepseek_tui' || appType === 'opensquilla' || appType === 'kimi') {
+  if (appType === 'openclaw' || appType === 'opencode' || appType === 'mimo_code' || appType === 'grok' || appType === 'qwen' || appType === 'deepseek_tui' || appType === 'opensquilla' || appType === 'kimi') {
     return { provider: null, count: 0 };
   }
   if (!fs.existsSync(dbPath)) {
@@ -848,6 +849,11 @@ const getWindowsSearchPaths = (command: string): string[] => {
   if (command === 'opencode') {
     return [
       path.join(appData, 'npm', 'opencode.cmd'),
+    ];
+  }
+  if (command === 'mimo') {
+    return [
+      path.join(appData, 'npm', 'mimo.cmd'),
     ];
   }
   if (command === 'qwen') {
@@ -1259,6 +1265,7 @@ const AGENT_ENGINE_COMMANDS = [
   { engine: CoworkAgentEngine.DeepSeekTui, appType: 'deepseek_tui', command: 'deepseek-tui' },
   { engine: CoworkAgentEngine.OpenSquilla, appType: 'opensquilla', command: 'opensquilla' },
   { engine: CoworkAgentEngine.KimiCode, appType: 'kimi', command: 'kimi' },
+  { engine: CoworkAgentEngine.MiMoCode, appType: 'mimo_code', command: 'mimo' },
 ] as const satisfies Array<{ engine: CliCoworkAgentEngine; appType: CliAppType; command: string }>;
 
 const listAgentEngineCommands = (

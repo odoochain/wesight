@@ -130,6 +130,7 @@ const QWEN_APP_TYPE: ExternalAgentProviderAppType = 'qwen';
 const DEEPSEEK_TUI_APP_TYPE: ExternalAgentProviderAppType = 'deepseek_tui';
 const OPENSQUILLA_APP_TYPE: ExternalAgentProviderAppType = 'opensquilla';
 const KIMI_APP_TYPE: ExternalAgentProviderAppType = 'kimi';
+const MIMO_CODE_APP_TYPE: ExternalAgentProviderAppType = 'mimo_code';
 const INTERNAL_META_KEY = '__wesightProviderMeta';
 
 const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-5';
@@ -234,7 +235,7 @@ const getLiveConfigPaths = (appType: ExternalAgentProviderAppType): ExternalAgen
       secondaryConfigPaths: [],
     };
   }
-  if (appType === OPENCODE_APP_TYPE) {
+  if (appType === OPENCODE_APP_TYPE || appType === MIMO_CODE_APP_TYPE) {
     return {
       primaryConfigPath: getOpenCodeConfigPath(),
       secondaryConfigPaths: [getOpenCodeAuthPath()],
@@ -527,7 +528,7 @@ const summarizeProvider = (
     };
   }
 
-  if (appType === OPENCODE_APP_TYPE) {
+  if (appType === OPENCODE_APP_TYPE || appType === MIMO_CODE_APP_TYPE) {
     return summarizeOpenCodeSettingsConfig(settingsConfig);
   }
   if (appType === HERMES_APP_TYPE) {
@@ -589,7 +590,7 @@ const buildSettingsConfigFromInput = (input: ExternalAgentProviderInput): Record
     return { env };
   }
 
-  if (input.appType === OPENCODE_APP_TYPE) {
+  if (input.appType === OPENCODE_APP_TYPE || input.appType === MIMO_CODE_APP_TYPE) {
     const model = input.model?.trim() || DEFAULT_OPENCODE_LOCAL_MODEL;
     return {
       config: mergeOpenCodeConfigForWesightModel({}, {
@@ -692,6 +693,7 @@ export const appTypeFromEngine = (engine: string): ExternalAgentProviderAppType 
   if (engine === 'deepseek_tui') return DEEPSEEK_TUI_APP_TYPE;
   if (engine === 'opensquilla') return OPENSQUILLA_APP_TYPE;
   if (engine === 'kimi_code') return KIMI_APP_TYPE;
+  if (engine === 'mimo_code') return MIMO_CODE_APP_TYPE;
   return null;
 };
 
@@ -860,7 +862,9 @@ export class ExternalAgentProviderStore {
         ? 'Local Kimi Code'
       : appType === OPENCODE_APP_TYPE
         ? 'Local OpenCode'
-        : appType === GROK_APP_TYPE
+        : appType === MIMO_CODE_APP_TYPE
+          ? 'Local MiMo-Code'
+          : appType === GROK_APP_TYPE
           ? 'Local Grok Build'
         : appType === QWEN_APP_TYPE
           ? 'Local Qwen Code'
@@ -882,6 +886,7 @@ export class ExternalAgentProviderStore {
       appType === HERMES_APP_TYPE
       || appType === OPENCLAW_APP_TYPE
       || appType === OPENCODE_APP_TYPE
+      || appType === MIMO_CODE_APP_TYPE
       || appType === GROK_APP_TYPE
       || appType === QWEN_APP_TYPE
       || appType === DEEPSEEK_TUI_APP_TYPE
@@ -962,6 +967,7 @@ export class ExternalAgentProviderStore {
       appType === HERMES_APP_TYPE
       || appType === OPENCLAW_APP_TYPE
       || appType === OPENCODE_APP_TYPE
+      || appType === MIMO_CODE_APP_TYPE
       || appType === GROK_APP_TYPE
       || appType === QWEN_APP_TYPE
       || appType === DEEPSEEK_TUI_APP_TYPE
@@ -1034,6 +1040,7 @@ export class ExternalAgentProviderStore {
     if (
       appType === HERMES_APP_TYPE
       || appType === OPENCODE_APP_TYPE
+      || appType === MIMO_CODE_APP_TYPE
       || appType === GROK_APP_TYPE
       || appType === QWEN_APP_TYPE
       || appType === DEEPSEEK_TUI_APP_TYPE
@@ -1080,6 +1087,7 @@ export class ExternalAgentProviderStore {
     if (
       appType === HERMES_APP_TYPE
       || appType === OPENCODE_APP_TYPE
+      || appType === MIMO_CODE_APP_TYPE
       || appType === GROK_APP_TYPE
       || appType === QWEN_APP_TYPE
       || appType === DEEPSEEK_TUI_APP_TYPE
@@ -1119,8 +1127,8 @@ export class ExternalAgentProviderStore {
   }
 
   private syncConfiguredProviders(appType: ExternalAgentProviderAppType): void {
-    if (appType === OPENCODE_APP_TYPE) {
-      this.syncOpenCodeLiveProviders();
+    if (appType === OPENCODE_APP_TYPE || appType === MIMO_CODE_APP_TYPE) {
+      this.syncOpenCodeLiveProviders(appType);
       return;
     }
     if (appType === HERMES_APP_TYPE) {
@@ -1209,16 +1217,16 @@ export class ExternalAgentProviderStore {
     }
   }
 
-  private syncOpenCodeLiveProviders(): void {
+  private syncOpenCodeLiveProviders(targetAppType: ExternalAgentProviderAppType = OPENCODE_APP_TYPE): void {
     const config = readJsonObject(getOpenCodeConfigPath());
     if (!config) {
-      this.importLiveProviderIfEmpty(OPENCODE_APP_TYPE);
+      this.importLiveProviderIfEmpty(targetAppType);
       return;
     }
     const records = listOpenCodeModelProviders(parseOpenCodeConfig(config));
     this.db
       .prepare('DELETE FROM external_agent_providers WHERE app_type = ? AND category = ?')
-      .run(OPENCODE_APP_TYPE, 'local');
+      .run(targetAppType, 'local');
     const now = Date.now();
     for (const record of records) {
       this.db
@@ -1238,7 +1246,7 @@ export class ExternalAgentProviderStore {
         )
         .run(
           record.id,
-          OPENCODE_APP_TYPE,
+          targetAppType,
           record.name,
           JSON.stringify(settingsConfigFromOpenCodeRecord(record)),
           'local',
@@ -1250,7 +1258,7 @@ export class ExternalAgentProviderStore {
     if (!records.some((record) => record.isCurrent) && records[0]) {
       this.db
         .prepare('UPDATE external_agent_providers SET is_current = 1 WHERE app_type = ? AND id = ?')
-        .run(OPENCODE_APP_TYPE, records[0].id);
+        .run(targetAppType, records[0].id);
     }
   }
 
@@ -1472,7 +1480,7 @@ export class ExternalAgentProviderStore {
       const settings = readJsonObject(getClaudeSettingsPath());
       return settings ? removeWesightManagedClaudeSettings(settings) : null;
     }
-    if (appType === OPENCODE_APP_TYPE) {
+    if (appType === OPENCODE_APP_TYPE || appType === MIMO_CODE_APP_TYPE) {
       const config = readJsonObject(getOpenCodeConfigPath());
       if (!config) return null;
       return {
@@ -1607,7 +1615,7 @@ export class ExternalAgentProviderStore {
       );
       return;
     }
-    if (provider.appType === OPENCODE_APP_TYPE) {
+    if (provider.appType === OPENCODE_APP_TYPE || provider.appType === MIMO_CODE_APP_TYPE) {
       const existingConfig = readJsonObject(getOpenCodeConfigPath()) ?? {};
       const selectedModel = getString(settingsConfig.model)
         || summarizeOpenCodeSettingsConfig(settingsConfig).model
