@@ -322,7 +322,7 @@ export interface CliAppConfigSnapshot {
 }
 
 export interface CliCommandStatus {
-  engine: Extract<CoworkAgentEngine, 'openclaw' | 'claude_code' | 'codex' | 'hermes' | 'opencode' | 'grok_build' | 'qwen_code' | 'deepseek_tui' | 'opensquilla' | 'codebuddy_code'>;
+  engine: Extract<CoworkAgentEngine, 'openclaw' | 'claude_code' | 'codex' | 'hermes' | 'opencode' | 'grok_build' | 'qwen_code' | 'deepseek_tui' | 'opensquilla' | 'kimi_code' | 'mimo_code' | 'codebuddy_code'>;
   appType: CliAppType;
   command: string;
   found: boolean;

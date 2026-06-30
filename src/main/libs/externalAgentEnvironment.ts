@@ -1052,10 +1052,12 @@ const buildCliConfigSnapshot = (
               ? getOpenSquillaConfigDir()
               : appType === 'codebuddy'
                 ? getCodeBuddyConfigDir()
-                : fs.existsSync(path.join(getKimiCodeConfigDir(), 'config.toml'))
-                  ? getKimiCodeConfigDir()
-                  : getKimiSdkConfigDir();
-  const primaryConfigPath = appType === 'claude'
+                : appType === 'mimo_code'
+                  ? path.join(homeDir(), '.claude')
+                  : fs.existsSync(path.join(getKimiCodeConfigDir(), 'config.toml'))
+                    ? getKimiCodeConfigDir()
+                    : getKimiSdkConfigDir();
+  const primaryConfigPath = appType === 'claude' || appType === 'mimo_code'
     ? resolveClaudeSettingsPath(configDir)
     : appType === 'codex'
       ? path.join(configDir, 'config.toml')
@@ -1076,7 +1078,7 @@ const buildCliConfigSnapshot = (
               : appType === 'codebuddy'
                 ? path.join(configDir, 'settings.json')
                 : path.join(configDir, 'config.toml');
-  const secondaryConfigPaths = appType === 'claude'
+  const secondaryConfigPaths = appType === 'claude' || appType === 'mimo_code'
     ? [resolveClaudeMcpPath(configDir, Boolean(claudeOverride))]
     : appType === 'codex'
       ? [path.join(configDir, 'auth.json')]

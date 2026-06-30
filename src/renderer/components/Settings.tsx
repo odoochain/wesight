@@ -3838,6 +3838,8 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
       || engine === CoworkAgentEngineValue.DeepSeekTui
       || engine === CoworkAgentEngineValue.OpenSquilla
       || engine === CoworkAgentEngineValue.KimiCode
+      || engine === CoworkAgentEngineValue.MiMoCode
+      || engine === CoworkAgentEngineValue.CodeBuddyCode
     ) {
       return (
         <div className="mt-4 space-y-4">
