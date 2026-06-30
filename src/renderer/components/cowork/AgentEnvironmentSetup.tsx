@@ -107,6 +107,22 @@ const AGENT_SETUP_TARGETS: AgentSetupTarget[] = [
     recommended: false,
   },
   {
+    engine: CoworkAgentEngine.MiMoCode,
+    appType: 'mimo_code',
+    labelKey: 'coworkAgentEngineMiMoCode',
+    hintKey: 'coworkAgentEngineMiMoCodeHint',
+    primary: false,
+    recommended: false,
+  },
+  {
+    engine: CoworkAgentEngine.CodeBuddyCode,
+    appType: 'codebuddy',
+    labelKey: 'coworkAgentEngineCodeBuddyCode',
+    hintKey: 'coworkAgentEngineCodeBuddyCodeHint',
+    primary: false,
+    recommended: false,
+  },
+  {
     engine: CoworkAgentEngine.OpenSquilla,
     appType: 'opensquilla',
     labelKey: 'coworkAgentEngineOpenSquilla',

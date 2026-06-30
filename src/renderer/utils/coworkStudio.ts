@@ -189,6 +189,7 @@ const getConfigSource = (config: CoworkConfig): ExternalAgentConfigSource | null
   if (config.agentEngine === CoworkAgentEngine.DeepSeekTui) return config.deepseekTuiConfigSource;
   if (config.agentEngine === CoworkAgentEngine.OpenSquilla) return config.opensquillaConfigSource;
   if (config.agentEngine === CoworkAgentEngine.KimiCode) return config.kimiCodeConfigSource;
+  if (config.agentEngine === CoworkAgentEngine.MiMoCode) return config.opencodeConfigSource;
   if (config.agentEngine === CoworkAgentEngine.CodeBuddyCode) return config.codeBuddyCodeConfigSource;
   if (config.agentEngine === CoworkAgentEngine.OpenClaw) return config.openclawConfigSource;
   return null;
