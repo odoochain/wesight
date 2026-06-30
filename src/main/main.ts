@@ -787,6 +787,7 @@ let qwenCodeRuntimeAdapter: ExternalCliRuntimeAdapter | null = null;
 let openSquillaRuntimeAdapter: ExternalCliRuntimeAdapter | null = null;
 let kimiCodeRuntimeAdapter: ExternalCliRuntimeAdapter | null = null;
 let mimoCodeRuntimeAdapter: ExternalCliRuntimeAdapter | null = null;
+let codeBuddyCodeRuntimeAdapter: ExternalCliRuntimeAdapter | null = null;
 let deepSeekTuiRuntimeManager: DeepSeekTuiRuntimeManager | null = null;
 let deepSeekTuiRuntimeAdapter: DeepSeekTuiRuntimeAdapter | null = null;
 let coworkEngineRouter: CoworkEngineRouter | null = null;
@@ -1229,7 +1230,8 @@ const getConfigSourceForEngine = (engine: CoworkAgentEngine): string | null => {
   if (engine === CoworkAgentEngineValue.DeepSeekTui) return config.deepseekTuiConfigSource;
   if (engine === CoworkAgentEngineValue.OpenSquilla) return config.opensquillaConfigSource;
   if (engine === CoworkAgentEngineValue.KimiCode) return config.kimiCodeConfigSource;
-  if (engine === CoworkAgentEngineValue.MiMoCode) return config.opencodeConfigSource;
+    if (engine === CoworkAgentEngineValue.MiMoCode) return config.opencodeConfigSource;
+  if (engine === CoworkAgentEngineValue.CodeBuddyCode) return config.codeBuddyCodeConfigSource;
   return ExternalAgentConfigSource.WesightModel;
 };
 
@@ -1246,6 +1248,7 @@ const getExternalProviderAppTypeForEngine = (
   if (engine === CoworkAgentEngineValue.OpenSquilla) return 'opensquilla';
   if (engine === CoworkAgentEngineValue.KimiCode) return 'kimi';
   if (engine === CoworkAgentEngineValue.MiMoCode) return 'mimo_code';
+  if (engine === CoworkAgentEngineValue.CodeBuddyCode) return 'codebuddy';
   return null;
 };
 
@@ -1325,6 +1328,7 @@ const getEngineSnapshotLabel = (engine: CoworkAgentEngine): string => {
   if (engine === CoworkAgentEngineValue.OpenSquilla) return 'OpenSquilla';
   if (engine === CoworkAgentEngineValue.KimiCode) return 'Kimi Code';
   if (engine === CoworkAgentEngineValue.MiMoCode) return 'MiMo-Code';
+  if (engine === CoworkAgentEngineValue.CodeBuddyCode) return 'CodeBuddy';
   return 'Cowork';
 };
 
@@ -1358,6 +1362,8 @@ const resolveSessionRuntimeSnapshot = (
       ? config.opensquillaPermissionMode
       : engine === CoworkAgentEngineValue.KimiCode
         ? config.kimiCodePermissionMode
+      : engine === CoworkAgentEngineValue.CodeBuddyCode
+        ? config.codeBuddyCodePermissionMode
       : null;
   const modelLabel = engine === CoworkAgentEngineValue.CodexApp
     ? 'Codex App Config'
@@ -1719,6 +1725,9 @@ const applyExternalAgentConfigSourceForEngine = (engine: CoworkAgentEngine): voi
   }
   if (engine === CoworkAgentEngineValue.MiMoCode) {
     applyExternalAgentConfigForEngine(engine, config.opencodeConfigSource);
+  }
+  if (engine === CoworkAgentEngineValue.CodeBuddyCode) {
+    applyExternalAgentConfigForEngine(engine, config.codeBuddyCodeConfigSource);
   }
 };
 
@@ -2402,6 +2411,13 @@ const getCoworkEngineRouter = () => {
         getCurrentProvider: (appType) => getExternalAgentProviderStore().getCurrentProvider(appType),
       });
     }
+    if (!codeBuddyCodeRuntimeAdapter) {
+      codeBuddyCodeRuntimeAdapter = new ExternalCliRuntimeAdapter({
+        engine: CoworkAgentEngineValue.CodeBuddyCode,
+        store: getCoworkStore(),
+        getCurrentProvider: (appType) => getExternalAgentProviderStore().getCurrentProvider(appType),
+      });
+    }
     if (!deepSeekTuiRuntimeAdapter) {
       deepSeekTuiRuntimeAdapter = new DeepSeekTuiRuntimeAdapter({
         store: getCoworkStore(),
@@ -2431,6 +2447,7 @@ const getCoworkEngineRouter = () => {
       openSquillaRuntime: openSquillaRuntimeAdapter,
       kimiCodeRuntime: kimiCodeRuntimeAdapter,
       mimoCodeRuntime: mimoCodeRuntimeAdapter,
+      codeBuddyCodeRuntime: codeBuddyCodeRuntimeAdapter,
       telemetryTracker: getRuntimeTelemetryTracker(),
     });
   }
@@ -3048,6 +3065,7 @@ const getDesktopPetEngineLabel = (engine: CoworkAgentEngine): string => {
   if (engine === CoworkAgentEngineValue.OpenSquilla) return 'OpenSquilla';
   if (engine === CoworkAgentEngineValue.KimiCode) return 'Kimi Code';
   if (engine === CoworkAgentEngineValue.MiMoCode) return 'MiMo-Code';
+  if (engine === CoworkAgentEngineValue.CodeBuddyCode) return 'CodeBuddy';
   return 'WeSight';
 };
 
@@ -5639,6 +5657,10 @@ if (!gotTheLock) {
         error: error instanceof Error ? error.message : 'Failed to sync DeepSeek-TUI config',
       };
     }
+  });
+
+  ipcMain.handle(CoworkIpcChannel.AgentConfigSyncCodeBuddyGlobal, async () => {
+    console.log('[Main] preserving native CodeBuddy settings; WeSight model config will be applied at runtime.');
   });
 
   ipcMain.handle(CoworkIpcChannel.AgentProvidersList, async (_event, input: { appType?: unknown }) => {

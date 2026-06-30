@@ -18,6 +18,7 @@ export const CoworkAgentEngine = {
   OpenSquilla: 'opensquilla',
   KimiCode: 'kimi_code',
   MiMoCode: 'mimo_code',
+  CodeBuddyCode: 'codebuddy_code',
 } as const;
 
 export type CoworkAgentEngine = typeof CoworkAgentEngine[keyof typeof CoworkAgentEngine];
@@ -38,6 +39,7 @@ export const CoworkAgentEngineValues = [
   CoworkAgentEngine.OpenSquilla,
   CoworkAgentEngine.KimiCode,
   CoworkAgentEngine.MiMoCode,
+  CoworkAgentEngine.CodeBuddyCode,
 ] as const;
 
 export const CliCoworkAgentEngines = [
@@ -52,6 +54,7 @@ export const CliCoworkAgentEngines = [
   CoworkAgentEngine.OpenSquilla,
   CoworkAgentEngine.KimiCode,
   CoworkAgentEngine.MiMoCode,
+  CoworkAgentEngine.CodeBuddyCode,
 ] as const;
 
 export type CliCoworkAgentEngine = typeof CliCoworkAgentEngines[number];
@@ -162,6 +165,26 @@ export const MiMoCodePermissionModeValues = [
   MiMoCodePermissionMode.Conservative,
 ] as const;
 
+export const CodeBuddyPermissionMode = {
+  Default: 'default',
+  BypassPermissions: 'bypassPermissions',
+  Plan: 'plan',
+  AcceptEdits: 'acceptEdits',
+  DontAsk: 'dontAsk',
+  Auto: 'auto',
+} as const;
+
+export type CodeBuddyPermissionMode = typeof CodeBuddyPermissionMode[keyof typeof CodeBuddyPermissionMode];
+
+export const CodeBuddyPermissionModeValues = [
+  CodeBuddyPermissionMode.Default,
+  CodeBuddyPermissionMode.BypassPermissions,
+  CodeBuddyPermissionMode.Plan,
+  CodeBuddyPermissionMode.AcceptEdits,
+  CodeBuddyPermissionMode.DontAsk,
+  CodeBuddyPermissionMode.Auto,
+] as const;
+
 export function isCoworkAgentEngine(value: unknown): value is CoworkAgentEngine {
   return typeof value === 'string'
     && CoworkAgentEngineValues.includes(value as CoworkAgentEngine);
@@ -205,6 +228,11 @@ export function isKimiCodePermissionMode(value: unknown): value is KimiCodePermi
 export function isMiMoCodePermissionMode(value: unknown): value is MiMoCodePermissionMode {
   return typeof value === 'string'
     && MiMoCodePermissionModeValues.includes(value as MiMoCodePermissionMode);
+}
+
+export function isCodeBuddyPermissionMode(value: unknown): value is CodeBuddyPermissionMode {
+  return typeof value === 'string'
+    && CodeBuddyPermissionModeValues.includes(value as CodeBuddyPermissionMode);
 }
 
 export function isCliCoworkAgentEngine(value: unknown): value is CliCoworkAgentEngine {
@@ -320,6 +348,7 @@ export const CoworkIpcChannel = {
   AgentConfigSyncOpenCodeGlobal: 'cowork:agentConfig:syncOpenCodeGlobal',
   AgentConfigSyncQwenCodeGlobal: 'cowork:agentConfig:syncQwenCodeGlobal',
   AgentConfigSyncDeepSeekTuiGlobal: 'cowork:agentConfig:syncDeepSeekTuiGlobal',
+  AgentConfigSyncCodeBuddyGlobal: 'cowork:agentConfig:syncCodeBuddyGlobal',
   AgentCliInstall: 'cowork:agentCli:install',
   AgentCliInstallProgress: 'cowork:agentCli:installProgress',
   AgentEnginesChanged: 'cowork:agentEngines:changed',

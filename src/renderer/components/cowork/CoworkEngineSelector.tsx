@@ -60,6 +60,11 @@ const ENGINE_OPTIONS: Array<{
     hintKey: 'coworkAgentEngineKimiCodeHint',
   },
   {
+    engine: CoworkAgentEngine.CodeBuddyCode,
+    labelKey: 'coworkAgentEngineCodeBuddyCode',
+    hintKey: 'coworkAgentEngineCodeBuddyCodeHint',
+  },
+  {
     engine: CoworkAgentEngine.YdCowork,
     labelKey: 'coworkAgentEngineClaudeLegacy',
     hintKey: 'coworkAgentEngineClaudeLegacyHint',
@@ -94,6 +99,11 @@ const ENGINE_OPTIONS: Array<{
     labelKey: 'coworkAgentEngineDeepSeekTui',
     hintKey: 'coworkAgentEngineDeepSeekTuiHint',
   },
+  {
+    engine: CoworkAgentEngine.CodeBuddyCode,
+    labelKey: 'coworkAgentEngineCodeBuddyCode',
+    hintKey: 'coworkAgentEngineCodeBuddyCodeHint',
+  },
 ];
 
 const isCliEngine = (engine: CoworkAgentEngineType): boolean => {
@@ -106,7 +116,8 @@ const isCliEngine = (engine: CoworkAgentEngineType): boolean => {
     || engine === CoworkAgentEngine.QwenCode
     || engine === CoworkAgentEngine.DeepSeekTui
     || engine === CoworkAgentEngine.OpenSquilla
-    || engine === CoworkAgentEngine.KimiCode;
+    || engine === CoworkAgentEngine.KimiCode
+    || engine === CoworkAgentEngine.CodeBuddyCode;
 };
 
 type CliEngineStatus = ExternalAgentEnvironmentSnapshot['engines'][number];
@@ -158,6 +169,7 @@ const getCliAppTypeForEngine = (engine: CoworkAgentEngineType): ExternalAgentPro
   if (engine === CoworkAgentEngine.DeepSeekTui) return 'deepseek_tui';
   if (engine === CoworkAgentEngine.OpenSquilla) return 'opensquilla';
   if (engine === CoworkAgentEngine.KimiCode) return 'kimi';
+  if (engine === CoworkAgentEngine.CodeBuddyCode) return 'codebuddy';
   return null;
 };
 
@@ -172,6 +184,7 @@ const ALL_CLI_APP_TYPES: ExternalAgentProviderAppType[] = [
   'deepseek_tui',
   'opensquilla',
   'kimi',
+  'codebuddy',
 ];
 
 const SUBMENU_VIEWPORT_MARGIN = 12;
@@ -257,6 +270,7 @@ const CoworkEngineSelector: React.FC<CoworkEngineSelectorProps> = ({
     if (engine === CoworkAgentEngine.DeepSeekTui) return coworkConfig.deepseekTuiConfigSource;
     if (engine === CoworkAgentEngine.OpenSquilla) return coworkConfig.opensquillaConfigSource;
     if (engine === CoworkAgentEngine.KimiCode) return coworkConfig.kimiCodeConfigSource;
+    if (engine === CoworkAgentEngine.CodeBuddyCode) return coworkConfig.codeBuddyCodeConfigSource;
     return ExternalAgentConfigSource.WesightModel;
   }, [coworkConfig]);
 

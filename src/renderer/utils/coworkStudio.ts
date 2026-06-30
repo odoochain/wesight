@@ -145,6 +145,24 @@ const engineAvatarManifest: Record<CoworkAgentEngine, CoworkStudioAvatar> = {
     faceColor: 0xd7d9ff,
     prop: 'default',
   },
+  [CoworkAgentEngine.MiMoCode]: {
+    id: 'mimo_code',
+    nameTag: 'MiMo Code',
+    primaryColor: 0x7c3aed,
+    secondaryColor: 0x4c1d95,
+    accentColor: 0xc4b5fd,
+    faceColor: 0xede9fe,
+    prop: 'tui',
+  },
+  [CoworkAgentEngine.CodeBuddyCode]: {
+    id: 'codebuddy_code',
+    nameTag: 'CodeBuddy',
+    primaryColor: 0x1a73e8,
+    secondaryColor: 0x0d47a1,
+    accentColor: 0x82b1ff,
+    faceColor: 0xe3f2fd,
+    prop: 'terminal',
+  },
 };
 
 const normalizeToolName = (value: string | null | undefined): string => (
@@ -171,6 +189,7 @@ const getConfigSource = (config: CoworkConfig): ExternalAgentConfigSource | null
   if (config.agentEngine === CoworkAgentEngine.DeepSeekTui) return config.deepseekTuiConfigSource;
   if (config.agentEngine === CoworkAgentEngine.OpenSquilla) return config.opensquillaConfigSource;
   if (config.agentEngine === CoworkAgentEngine.KimiCode) return config.kimiCodeConfigSource;
+  if (config.agentEngine === CoworkAgentEngine.CodeBuddyCode) return config.codeBuddyCodeConfigSource;
   if (config.agentEngine === CoworkAgentEngine.OpenClaw) return config.openclawConfigSource;
   return null;
 };

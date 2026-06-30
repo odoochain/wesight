@@ -1040,6 +1040,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
     deepseek_tui: '',
     opensquilla: '',
     kimi: '',
+    codebuddy: '',
   });
   const [agentProviderLists, setAgentProviderLists] = useState<Partial<Record<ExternalAgentProviderAppType, ExternalAgentProviderListResult>>>({});
   const [agentProviderLoadingAppType, setAgentProviderLoadingAppType] = useState<ExternalAgentProviderAppType | null>(null);

@@ -131,6 +131,8 @@ const DEEPSEEK_TUI_APP_TYPE: ExternalAgentProviderAppType = 'deepseek_tui';
 const OPENSQUILLA_APP_TYPE: ExternalAgentProviderAppType = 'opensquilla';
 const KIMI_APP_TYPE: ExternalAgentProviderAppType = 'kimi';
 const MIMO_CODE_APP_TYPE: ExternalAgentProviderAppType = 'mimo_code';
+const CODEBUDDY_APP_TYPE: ExternalAgentProviderAppType = 'codebuddy';
+const DEFAULT_CODEBUDDY_LOCAL_MODEL = 'local-codebuddy';
 const INTERNAL_META_KEY = '__wesightProviderMeta';
 
 const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-5';
@@ -288,6 +290,15 @@ const getLiveConfigPaths = (appType: ExternalAgentProviderAppType): ExternalAgen
         path.join(getKimiCodeConfigDir(), 'skills'),
         path.join(getKimiSdkConfigDir(), 'skills'),
       ],
+    };
+  }
+  if (appType === CODEBUDDY_APP_TYPE) {
+    const codeBuddyDir = fs.existsSync(path.join(homeDir(), '.codebuddy', 'settings.json'))
+      ? path.join(homeDir(), '.codebuddy')
+      : path.join(homeDir(), '.workbuddy');
+    return {
+      primaryConfigPath: path.join(codeBuddyDir, 'settings.json'),
+      secondaryConfigPaths: [path.join(codeBuddyDir, 'mcp.json')],
     };
   }
   return {
@@ -552,6 +563,13 @@ const summarizeProvider = (
   if (appType === KIMI_APP_TYPE) {
     return summarizeKimiCodeSettingsConfig(settingsConfig);
   }
+  if (appType === CODEBUDDY_APP_TYPE) {
+    return {
+      apiKey: '',
+      baseUrl: '',
+      model: getString(settingsConfig.model) || DEFAULT_CODEBUDDY_LOCAL_MODEL,
+    };
+  }
   if (appType === GROK_APP_TYPE) {
     return {
       apiKey: '',
@@ -672,6 +690,13 @@ const buildSettingsConfigFromInput = (input: ExternalAgentProviderInput): Record
       provider: input.name.trim() || 'Kimi Code',
     };
   }
+  if (input.appType === CODEBUDDY_APP_TYPE) {
+    const model = input.model?.trim() || DEFAULT_CODEBUDDY_LOCAL_MODEL;
+    return {
+      model,
+      provider: input.name.trim() || 'CodeBuddy',
+    };
+  }
 
   const model = input.model?.trim() || DEFAULT_CODEX_MODEL;
   return {
@@ -694,6 +719,7 @@ export const appTypeFromEngine = (engine: string): ExternalAgentProviderAppType 
   if (engine === 'opensquilla') return OPENSQUILLA_APP_TYPE;
   if (engine === 'kimi_code') return KIMI_APP_TYPE;
   if (engine === 'mimo_code') return MIMO_CODE_APP_TYPE;
+  if (engine === 'codebuddy_code') return CODEBUDDY_APP_TYPE;
   return null;
 };
 
@@ -864,6 +890,8 @@ export class ExternalAgentProviderStore {
         ? 'Local OpenCode'
         : appType === MIMO_CODE_APP_TYPE
           ? 'Local MiMo-Code'
+          : appType === CODEBUDDY_APP_TYPE
+            ? 'Local CodeBuddy'
           : appType === GROK_APP_TYPE
           ? 'Local Grok Build'
         : appType === QWEN_APP_TYPE
@@ -1157,6 +1185,10 @@ export class ExternalAgentProviderStore {
     }
     if (appType === KIMI_APP_TYPE) {
       this.syncKimiCodeLiveProviders();
+      return;
+    }
+    if (appType === CODEBUDDY_APP_TYPE) {
+      this.importLiveProviderIfEmpty(appType);
       return;
     }
     const hasCurrent = Boolean(this.getCurrentProviderId(appType));
@@ -1589,6 +1621,20 @@ export class ExternalAgentProviderStore {
         defaultModel,
         model: defaultModel,
         skillsDir,
+      };
+    }
+    if (appType === CODEBUDDY_APP_TYPE) {
+      const codeBuddyDir = fs.existsSync(path.join(homeDir(), '.codebuddy', 'settings.json'))
+        ? path.join(homeDir(), '.codebuddy')
+        : path.join(homeDir(), '.workbuddy');
+      const settingsPath = path.join(codeBuddyDir, 'settings.json');
+      const config = readJsonObject(settingsPath);
+      if (!config) return null;
+      const model = getString(config.model) || DEFAULT_CODEBUDDY_LOCAL_MODEL;
+      return {
+        config,
+        model,
+        provider: 'codebuddy',
       };
     }
     const auth = readJsonObject(getCodexAuthPath()) ?? {};
