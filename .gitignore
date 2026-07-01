@@ -39,6 +39,7 @@ SKILLs/**/.venv/
 package-lock.json
 
 nul
+*.log
 .work.env
 
 .playwright-mcp/
