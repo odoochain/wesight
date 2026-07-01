@@ -11,6 +11,8 @@ import {
   type AgentTeamWorkflow as AgentTeamWorkflowType,
   ClaudeCodePermissionMode,
   type ClaudeCodePermissionMode as ClaudeCodePermissionModeType,
+  CodeBuddyPermissionMode,
+  type CodeBuddyPermissionMode as CodeBuddyPermissionModeType,
   type CoworkAgentEngine,
   CoworkSessionKind,
   type CoworkSessionKind as CoworkSessionKindType,
@@ -21,6 +23,7 @@ import {
   type ExternalAgentConfigSource as ExternalAgentConfigSourceType,
   isAgentTeamWorkflow,
   isClaudeCodePermissionMode,
+  isCodeBuddyPermissionMode,
   isCoworkAgentEngine,
   isCoworkSessionKind,
   isDeepSeekTuiPermissionMode,
@@ -94,6 +97,7 @@ const DEFAULT_OPENSQUILLA_CONFIG_SOURCE: ExternalAgentConfigSourceType = Externa
 const DEFAULT_OPENSQUILLA_PERMISSION_MODE: OpenSquillaPermissionModeType = OpenSquillaPermissionMode.Bypass;
 const DEFAULT_KIMI_CODE_CONFIG_SOURCE: ExternalAgentConfigSourceType = ExternalAgentConfigSource.LocalCli;
 const DEFAULT_KIMI_CODE_PERMISSION_MODE: KimiCodePermissionModeType = KimiCodePermissionMode.Auto;
+const DEFAULT_CODEBUDDY_CODE_CONFIG_SOURCE: ExternalAgentConfigSourceType = ExternalAgentConfigSource.LocalCli;
 const MIN_MEMORY_USER_MEMORIES_MAX_ITEMS = 1;
 const MAX_MEMORY_USER_MEMORIES_MAX_ITEMS = 60;
 const MEMORY_NEAR_DUPLICATE_MIN_SCORE = 0.82;
@@ -582,6 +586,16 @@ function normalizeKimiCodePermissionMode(value?: string | null): KimiCodePermiss
   return DEFAULT_KIMI_CODE_PERMISSION_MODE;
 }
 
+const normalizeCodeBuddyConfigSource = (value?: string | null): ExternalAgentConfigSourceType => {
+  if (isExternalAgentConfigSource(value)) return value;
+  return DEFAULT_CODEBUDDY_CODE_CONFIG_SOURCE;
+};
+
+const normalizeCodeBuddyPermissionMode = (value?: string | null): CodeBuddyPermissionModeType => {
+  if (isCodeBuddyPermissionMode(value)) return value;
+  return CodeBuddyPermissionMode.Auto;
+};
+
 export interface CoworkMessageMetadata {
   toolName?: string;
   toolInput?: Record<string, unknown>;
@@ -738,6 +752,8 @@ export interface CoworkConfig {
   opensquillaPermissionMode: OpenSquillaPermissionModeType;
   kimiCodeConfigSource: ExternalAgentConfigSourceType;
   kimiCodePermissionMode: KimiCodePermissionModeType;
+  codeBuddyCodeConfigSource: ExternalAgentConfigSourceType;
+  codeBuddyCodePermissionMode: CodeBuddyPermissionModeType;
   memoryEnabled: boolean;
   memoryImplicitUpdateEnabled: boolean;
   memoryLlmJudgeEnabled: boolean;
@@ -765,6 +781,8 @@ export type CoworkConfigUpdate = Partial<Pick<
   | 'opensquillaPermissionMode'
   | 'kimiCodeConfigSource'
   | 'kimiCodePermissionMode'
+  | 'codeBuddyCodeConfigSource'
+  | 'codeBuddyCodePermissionMode'
   | 'memoryEnabled'
   | 'memoryImplicitUpdateEnabled'
   | 'memoryLlmJudgeEnabled'
@@ -1875,6 +1893,8 @@ export class CoworkStore {
         'opensquillaPermissionMode',
         'kimiCodeConfigSource',
         'kimiCodePermissionMode',
+        'codeBuddyCodeConfigSource',
+        'codeBuddyCodePermissionMode',
         'memoryEnabled',
         'memoryImplicitUpdateEnabled',
         'memoryLlmJudgeEnabled',
@@ -1907,6 +1927,8 @@ export class CoworkStore {
         opensquillaPermissionMode: normalizeOpenSquillaPermissionMode(cfg.get('opensquillaPermissionMode')),
         kimiCodeConfigSource: normalizeKimiCodeConfigSource(cfg.get('kimiCodeConfigSource')),
         kimiCodePermissionMode: normalizeKimiCodePermissionMode(cfg.get('kimiCodePermissionMode')),
+        codeBuddyCodeConfigSource: normalizeCodeBuddyConfigSource(cfg.get('codeBuddyCodeConfigSource')),
+        codeBuddyCodePermissionMode: normalizeCodeBuddyPermissionMode(cfg.get('codeBuddyCodePermissionMode')),
         memoryEnabled: parseBooleanConfig(cfg.get('memoryEnabled'), DEFAULT_MEMORY_ENABLED),
         memoryImplicitUpdateEnabled: parseBooleanConfig(
           cfg.get('memoryImplicitUpdateEnabled'),
@@ -1982,6 +2004,12 @@ export class CoworkStore {
       }
       if (config.kimiCodePermissionMode !== undefined) {
         entries.push(['kimiCodePermissionMode', normalizeKimiCodePermissionMode(config.kimiCodePermissionMode)]);
+      }
+      if (config.codeBuddyCodeConfigSource !== undefined) {
+        entries.push(['codeBuddyCodeConfigSource', normalizeCodeBuddyConfigSource(config.codeBuddyCodeConfigSource)]);
+      }
+      if (config.codeBuddyCodePermissionMode !== undefined) {
+        entries.push(['codeBuddyCodePermissionMode', normalizeCodeBuddyPermissionMode(config.codeBuddyCodePermissionMode)]);
       }
       if (config.memoryEnabled !== undefined) {
         entries.push(['memoryEnabled', config.memoryEnabled ? '1' : '0']);

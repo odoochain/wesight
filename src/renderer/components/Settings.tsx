@@ -71,6 +71,7 @@ import AgentsView from './agent/AgentsView';
 import Modal from './common/Modal';
 import AgentEnvironmentSetup from './cowork/AgentEnvironmentSetup';
 import ErrorMessage from './ErrorMessage';
+import FreeLLMApiPanel from './FreeLLMApiPanel';
 import BrainIcon from './icons/BrainIcon';
 import ConnectorIcon from './icons/ConnectorIcon';
 import PencilIcon from './icons/PencilIcon';
@@ -95,7 +96,6 @@ import {
   ZhipuIcon,
 } from './icons/providers';
 import TrashIcon from './icons/TrashIcon';
-import FreeLLMApiPanel from './FreeLLMApiPanel';
 import IMSettings from './im/IMSettings';
 import McpManager from './mcp/McpManager';
 import PetSprite, { PetMood } from './pet/PetSprite';
@@ -169,6 +169,16 @@ const COWORK_AGENT_ENGINE_OPTIONS: Array<{
     value: CoworkAgentEngineValue.DeepSeekTui,
     labelKey: 'coworkAgentEngineDeepSeekTui',
     hintKey: 'coworkAgentEngineDeepSeekTuiHint',
+  },
+  {
+    value: CoworkAgentEngineValue.MiMoCode,
+    labelKey: 'coworkAgentEngineMiMoCode',
+    hintKey: 'coworkAgentEngineMiMoCodeHint',
+  },
+  {
+    value: CoworkAgentEngineValue.CodeBuddyCode,
+    labelKey: 'coworkAgentEngineCodeBuddyCode',
+    hintKey: 'coworkAgentEngineCodeBuddyCodeHint',
   },
 ];
 
@@ -1246,6 +1256,9 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
   const [kimiCodePermissionMode, setKimiCodePermissionMode] = useState<KimiCodePermissionMode>(
     coworkConfig.kimiCodePermissionMode ?? KimiCodePermissionModeValue.Auto,
   );
+  const [codeBuddyCodeConfigSource, setCodeBuddyCodeConfigSource] = useState<ExternalAgentConfigSource>(
+    coworkConfig.codeBuddyCodeConfigSource ?? ExternalAgentConfigSourceValue.LocalCli,
+  );
   const [openSquillaGatewayResult, setOpenSquillaGatewayResult] = useState<OpenSquillaGatewayResult | null>(null);
   const [openSquillaGatewayBusyAction, setOpenSquillaGatewayBusyAction] = useState<OpenSquillaGatewayAction | null>(null);
   const [agentConfigImportingAppType, setAgentConfigImportingAppType] = useState<ExternalAgentProviderAppType | null>(null);
@@ -1265,6 +1278,8 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
     deepseek_tui: '',
     opensquilla: '',
     kimi: '',
+    mimo_code: '',
+    codebuddy: '',
   });
   const [agentProviderLists, setAgentProviderLists] = useState<Partial<Record<ExternalAgentProviderAppType, ExternalAgentProviderListResult>>>({});
   const [agentProviderLoadingAppType, setAgentProviderLoadingAppType] = useState<ExternalAgentProviderAppType | null>(null);
@@ -1279,6 +1294,8 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
     if (coworkAgentEngine === CoworkAgentEngineValue.DeepSeekTui) return 'deepseek_tui';
     if (coworkAgentEngine === CoworkAgentEngineValue.OpenSquilla) return 'opensquilla';
     if (coworkAgentEngine === CoworkAgentEngineValue.KimiCode) return 'kimi';
+    if (coworkAgentEngine === CoworkAgentEngineValue.MiMoCode) return 'mimo_code';
+    if (coworkAgentEngine === CoworkAgentEngineValue.CodeBuddyCode) return 'codebuddy';
     return null;
   }, [coworkAgentEngine]);
 
@@ -4048,6 +4065,8 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
       || engine === CoworkAgentEngineValue.DeepSeekTui
       || engine === CoworkAgentEngineValue.OpenSquilla
       || engine === CoworkAgentEngineValue.KimiCode
+      || engine === CoworkAgentEngineValue.MiMoCode
+      || engine === CoworkAgentEngineValue.CodeBuddyCode
     ) {
       return (
         <div className="mt-4 space-y-4">
@@ -4135,6 +4154,8 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
     if (selectedExternalAgentAppType === 'deepseek_tui') return deepseekTuiConfigSource;
     if (selectedExternalAgentAppType === 'opensquilla') return opensquillaConfigSource;
     if (selectedExternalAgentAppType === 'kimi') return kimiCodeConfigSource;
+    if (selectedExternalAgentAppType === 'mimo_code') return opencodeConfigSource;
+    if (selectedExternalAgentAppType === 'codebuddy') return codeBuddyCodeConfigSource;
     return null;
   }, [
     claudeCodeConfigSource,
@@ -4180,6 +4201,15 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
     }
     if (selectedExternalAgentAppType === 'kimi') {
       setKimiCodeConfigSource(source);
+      return;
+    }
+    if (selectedExternalAgentAppType === 'mimo_code') {
+      setOpenCodeConfigSource(source);
+      return;
+    }
+    if (selectedExternalAgentAppType === 'codebuddy') {
+      setCodeBuddyCodeConfigSource(source);
+      return;
     }
   };
 
@@ -4385,7 +4415,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice, notice
       ? [cliStatus.config.primaryConfigPath, ...cliStatus.config.secondaryConfigPaths].filter(Boolean)
       : [];
     const isImporting = agentConfigImportingAppType === selectedExternalAgentAppType;
-    const sourceOptions = selectedExternalAgentAppType === 'opensquilla' || selectedExternalAgentAppType === 'kimi' ? [
+    const sourceOptions = selectedExternalAgentAppType === 'opensquilla' || selectedExternalAgentAppType === 'kimi' || selectedExternalAgentAppType === 'mimo_code' || selectedExternalAgentAppType === 'codebuddy' ? [
       {
         value: ExternalAgentConfigSourceValue.LocalCli,
         labelKey: 'coworkAgentConfigSourceLocalCli',

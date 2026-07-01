@@ -1,5 +1,6 @@
 import {
   ClaudeCodePermissionMode,
+  CodeBuddyPermissionMode,
   CoworkAgentEngine,
   ExternalAgentConfigSource,
   KimiCodePermissionMode,
@@ -63,6 +64,8 @@ const makeConfig = (agentEngine: CoworkAgentEngine): CoworkConfig => ({
   opensquillaPermissionMode: OpenSquillaPermissionMode.Bypass,
   kimiCodeConfigSource: ExternalAgentConfigSource.LocalCli,
   kimiCodePermissionMode: KimiCodePermissionMode.Auto,
+  codeBuddyCodeConfigSource: ExternalAgentConfigSource.LocalCli,
+  codeBuddyCodePermissionMode: CodeBuddyPermissionMode.Auto,
   memoryEnabled: true,
   memoryImplicitUpdateEnabled: true,
   memoryLlmJudgeEnabled: false,

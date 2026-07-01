@@ -3,6 +3,7 @@ import {
   ChartBarIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import type { HeadroomStats } from '@shared/cowork/constants';
 import {
   CoworkAgentEngine,
   ExternalAgentConfigSource,
@@ -34,7 +35,6 @@ import {
 } from 'recharts';
 
 import { coworkService } from '../../services/cowork';
-import type { HeadroomStats } from '@shared/cowork/constants';
 import { i18nService } from '../../services/i18n';
 import type { RootState } from '../../store';
 import type {

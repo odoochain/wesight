@@ -634,6 +634,15 @@ const getCliConfigPaths = (appType: CliAppType): { primaryConfigPath: string; se
         : appType === 'qwen'
           ? path.join(homeDir(), '.qwen')
           : path.join(homeDir(), '.deepseek');
+  if (appType === 'codebuddy') {
+    const codeBuddyDir = fs.existsSync(path.join(homeDir(), '.codebuddy', 'settings.json'))
+      ? path.join(homeDir(), '.codebuddy')
+      : path.join(homeDir(), '.workbuddy');
+    return {
+      primaryConfigPath: path.join(codeBuddyDir, 'settings.json'),
+      secondaryConfigPaths: [path.join(codeBuddyDir, 'mcp.json')],
+    };
+  }
   return {
     primaryConfigPath: appType === 'claude'
       ? path.join(configDir, 'settings.json')
@@ -982,6 +991,9 @@ export const applyExternalAgentConfigForEngine = (
   if (engine === CoworkAgentEngine.OpenSquilla) {
     return;
   }
+  if (engine === CoworkAgentEngine.CodeBuddyCode) {
+    return;
+  }
 };
 
 const buildProviderConfig = (
@@ -1000,6 +1012,8 @@ const buildProviderConfig = (
         ? 'Grok Build 本机配置'
         : appType === 'qwen'
           ? 'Qwen Code 本机配置'
+          : appType === 'codebuddy'
+            ? 'CodeBuddy 本机配置'
           : 'DeepSeek-TUI 本机配置';
   const modelId = input.model || (appType === 'claude'
     ? DEFAULT_CLAUDE_MODEL

@@ -21,6 +21,7 @@ test('runtime monitor is a separate activity sidebar mode', () => {
     'runtime_monitor',
     'live_code',
     'code_diff',
+    'opensquilla_console',
   ]);
 });
 

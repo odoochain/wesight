@@ -9,9 +9,11 @@ import path from 'path';
 import {
   ClaudeCodePermissionMode,
   type CliCoworkAgentEngine,
+  CodeBuddyPermissionMode,
   CoworkAgentEngine,
   ExternalAgentConfigSource,
   isClaudeCodePermissionMode,
+  isCodeBuddyPermissionMode,
   KimiCodePermissionMode,
   OpenCodePermissionMode,
   OpenSquillaPermissionMode,
@@ -1773,6 +1775,34 @@ export class ExternalCliRuntimeAdapter extends EventEmitter implements CoworkRun
       return args;
     }
 
+    if (this.engine === CoworkAgentEngine.CodeBuddyCode) {
+      const permissionMode = this.resolveCodeBuddyPermissionMode();
+      const args = [
+        '-p',
+        '--output-format',
+        'stream-json',
+        '--include-partial-messages',
+        '--permission-mode',
+        permissionMode,
+      ];
+      if (this.getConfigSource() === ExternalAgentConfigSource.WesightModel) {
+        const resolved = resolveRawApiConfig(apiConfigOverride);
+        if (resolved.config) {
+          args.push('--model', resolved.config.model);
+        }
+      } else {
+        const model = selectedProvider?.summary.model?.trim();
+        if (model) {
+          args.push('--model', model);
+        }
+      }
+      if (cliSessionId) {
+        args.push('--continue', cliSessionId);
+      }
+      args.push(prompt);
+      return args;
+    }
+
     const canResumeCodexSession = this.getConfigSource() !== ExternalAgentConfigSource.WesightModel;
     if (cliSessionId && canResumeCodexSession) {
       const resumeArgs = [
@@ -1846,6 +1876,9 @@ export class ExternalCliRuntimeAdapter extends EventEmitter implements CoworkRun
     if (this.engine === CoworkAgentEngine.KimiCode) {
       return config.kimiCodeConfigSource;
     }
+    if (this.engine === CoworkAgentEngine.CodeBuddyCode) {
+      return config.codeBuddyCodeConfigSource;
+    }
     return ExternalAgentConfigSource.WesightModel;
   }
 
@@ -1874,6 +1907,9 @@ export class ExternalCliRuntimeAdapter extends EventEmitter implements CoworkRun
     if (this.engine === CoworkAgentEngine.KimiCode) {
       return this.getCurrentProvider?.('kimi') ?? null;
     }
+    if (this.engine === CoworkAgentEngine.CodeBuddyCode) {
+      return this.getCurrentProvider?.('codebuddy') ?? null;
+    }
     return null;
   }
 
@@ -1898,6 +1934,14 @@ export class ExternalCliRuntimeAdapter extends EventEmitter implements CoworkRun
     Object.assign(env, buildQwenCodeRuntimeEnv(resolved.config));
   }
 
+  private resolveCodeBuddyPermissionMode(): CodeBuddyPermissionMode {
+    const configMode = this.store.getConfig().codeBuddyCodePermissionMode;
+    if (isCodeBuddyPermissionMode(configMode)) {
+      return configMode;
+    }
+    return CodeBuddyPermissionMode.Auto;
+  }
+
   private getCommandName(): string {
     if (this.engine === CoworkAgentEngine.ClaudeCode) return 'claude';
     if (this.engine === CoworkAgentEngine.Codex) return 'codex';
@@ -1905,6 +1949,7 @@ export class ExternalCliRuntimeAdapter extends EventEmitter implements CoworkRun
     if (this.engine === CoworkAgentEngine.GrokBuild) return 'grok';
     if (this.engine === CoworkAgentEngine.OpenSquilla) return 'opensquilla';
     if (this.engine === CoworkAgentEngine.KimiCode) return 'kimi';
+    if (this.engine === CoworkAgentEngine.CodeBuddyCode) return 'codebuddy';
     return 'qwen';
   }
 
@@ -3814,6 +3859,7 @@ export class ExternalCliRuntimeAdapter extends EventEmitter implements CoworkRun
     if (this.engine === CoworkAgentEngine.GrokBuild) return 'Grok Build CLI';
     if (this.engine === CoworkAgentEngine.OpenSquilla) return 'OpenSquilla CLI';
     if (this.engine === CoworkAgentEngine.KimiCode) return 'Kimi Code CLI';
+    if (this.engine === CoworkAgentEngine.CodeBuddyCode) return 'CodeBuddy CLI';
     return 'Qwen Code CLI';
   }
 }

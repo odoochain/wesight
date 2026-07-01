@@ -233,6 +233,31 @@ npm run compile:electron
 npm run lint
 ```
 
+## Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run specific tests
+npx vitest run src/main/skillManager.test.ts
+npx vitest run src/main/im/
+```
+
+### Test Coverage
+
+| Module | File | Cases | Status |
+|--------|------|-------|--------|
+| SkillManager | `src/main/skillManager.test.ts` | 99 | ✅ |
+| SkillHub Marketplace | `src/main/skillHubMarketplace.test.ts` | 5 | ✅ |
+| IM Hub Feishu Gateway | `src/main/im/nativeFeishuGateway.test.ts` | 4 | ✅ |
+| IM Hub Cowork | `src/main/im/imCoworkHandler.test.ts` | 1 | ✅ |
+| IM Hub Gateway Manager | `src/main/im/imGatewayManager.test.ts` | 2 | ✅ |
+| IM Hub Store | `src/main/im/imStore.test.ts` | 3 | ✅ |
+| **Total** | | **114** | **All passing** |
+
+**Test framework**: vitest v4.1.x
+
 ## Packaging
 
 ```bash

@@ -119,6 +119,17 @@ const INSTALL_TARGETS: Record<CliAppType, InstallTarget> = {
       },
     ],
   },
+  codebuddy: {
+    appType: 'codebuddy',
+    displayName: 'CodeBuddy',
+    command: 'codebuddy',
+    methods: [
+      {
+        id: 'npm',
+        packageName: '@tencent-ai/codebuddy-code',
+      },
+    ],
+  },
   grok: {
     appType: 'grok',
     displayName: 'Grok Build',

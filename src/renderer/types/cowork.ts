@@ -1,5 +1,6 @@
 import type {
   ClaudeCodePermissionMode,
+  CodeBuddyPermissionMode,
   CoworkAgentEngine,
   CoworkSessionKind,
   DeepSeekTuiPermissionMode,
@@ -37,7 +38,7 @@ export type CoworkMessageType = 'user' | 'assistant' | 'tool_use' | 'tool_result
 export type CoworkExecutionMode = 'auto' | 'local' | 'sandbox';
 export type { CoworkAgentEngine, ExternalAgentConfigSource };
 export type { CoworkSessionKind };
-export type { ClaudeCodePermissionMode, DeepSeekTuiPermissionMode, KimiCodePermissionMode, OpenCodePermissionMode, OpenSquillaPermissionMode, QwenCodePermissionMode };
+export type { ClaudeCodePermissionMode, CodeBuddyPermissionMode,DeepSeekTuiPermissionMode, KimiCodePermissionMode, OpenCodePermissionMode, OpenSquillaPermissionMode, QwenCodePermissionMode };
 
 export type StartupServiceStatus = 'pending' | 'running' | 'ready' | 'error' | 'degraded';
 
@@ -122,6 +123,8 @@ export interface CoworkConfig {
   opensquillaPermissionMode: OpenSquillaPermissionMode;
   kimiCodeConfigSource: ExternalAgentConfigSource;
   kimiCodePermissionMode: KimiCodePermissionMode;
+  codeBuddyCodeConfigSource: ExternalAgentConfigSource;
+  codeBuddyCodePermissionMode: CodeBuddyPermissionMode;
   memoryEnabled: boolean;
   memoryImplicitUpdateEnabled: boolean;
   memoryLlmJudgeEnabled: boolean;
@@ -149,6 +152,8 @@ export type CoworkConfigUpdate = Partial<Pick<
   | 'opensquillaPermissionMode'
   | 'kimiCodeConfigSource'
   | 'kimiCodePermissionMode'
+  | 'codeBuddyCodeConfigSource'
+  | 'codeBuddyCodePermissionMode'
   | 'memoryEnabled'
   | 'memoryImplicitUpdateEnabled'
   | 'memoryLlmJudgeEnabled'
@@ -302,7 +307,7 @@ export interface CoworkConfigResult {
   error?: string;
 }
 
-export type CliAppType = 'claude' | 'codex' | 'hermes' | 'openclaw' | 'opencode' | 'grok' | 'qwen' | 'deepseek_tui' | 'opensquilla' | 'kimi';
+export type CliAppType = 'claude' | 'codex' | 'hermes' | 'openclaw' | 'opencode' | 'grok' | 'qwen' | 'deepseek_tui' | 'opensquilla' | 'kimi' | 'mimo_code' | 'codebuddy';
 export type CliAuthStatus = 'unknown' | 'logged_out' | 'logged_in' | 'expired' | 'unconfigured';
 
 export interface CliAppConfigSnapshot {
@@ -317,7 +322,7 @@ export interface CliAppConfigSnapshot {
 }
 
 export interface CliCommandStatus {
-  engine: Extract<CoworkAgentEngine, 'openclaw' | 'claude_code' | 'codex' | 'hermes' | 'opencode' | 'grok_build' | 'qwen_code' | 'deepseek_tui' | 'opensquilla'>;
+  engine: Extract<CoworkAgentEngine, 'openclaw' | 'claude_code' | 'codex' | 'hermes' | 'opencode' | 'grok_build' | 'qwen_code' | 'deepseek_tui' | 'opensquilla' | 'kimi_code' | 'mimo_code' | 'codebuddy_code'>;
   appType: CliAppType;
   command: string;
   found: boolean;

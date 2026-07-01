@@ -233,6 +233,31 @@ npm run compile:electron
 npm run lint
 ```
 
+## 测试
+
+```bash
+# 运行全部测试
+npm test
+
+# 运行特定测试
+npx vitest run src/main/skillManager.test.ts
+npx vitest run src/main/im/
+```
+
+### 测试覆盖率统计
+
+| 模块 | 文件 | 用例数 | 状态 |
+|------|------|--------|------|
+| SkillManager | `src/main/skillManager.test.ts` | 99 | ✅ |
+| SkillHub Marketplace | `src/main/skillHubMarketplace.test.ts` | 5 | ✅ |
+| IM Hub 飞书网关 | `src/main/im/nativeFeishuGateway.test.ts` | 4 | ✅ |
+| IM Hub Cowork | `src/main/im/imCoworkHandler.test.ts` | 1 | ✅ |
+| IM Hub 网关管理 | `src/main/im/imGatewayManager.test.ts` | 2 | ✅ |
+| IM Hub 存储 | `src/main/im/imStore.test.ts` | 3 | ✅ |
+| **合计** | | **114** | **全部通过** |
+
+**测试框架**：vitest v4.1.x
+
 ## 打包
 
 ```bash

@@ -24,7 +24,7 @@ import {
 } from './hermesConfig';
 import { readOpenClawGlobalConfig, summarizeOpenClawConfig } from './openclawSystemRuntime';
 
-export type CliAppType = 'claude' | 'codex' | 'hermes' | 'openclaw' | 'opencode' | 'grok' | 'qwen' | 'deepseek_tui' | 'opensquilla' | 'kimi' | 'mimo_code';
+export type CliAppType = 'claude' | 'codex' | 'hermes' | 'openclaw' | 'opencode' | 'grok' | 'qwen' | 'deepseek_tui' | 'opensquilla' | 'kimi' | 'mimo_code' | 'codebuddy';
 export type CliAuthStatus = 'unknown' | 'logged_out' | 'logged_in' | 'expired' | 'unconfigured';
 
 export interface CliAppConfigSnapshot {
@@ -272,6 +272,14 @@ const getKimiSdkConfigDir = (): string => path.join(homeDir(), '.kimi');
 const getKimiCodeBinDir = (): string => path.join(getKimiCodeConfigDir(), 'bin');
 
 const getKimiCodeCredentialsPath = (): string => path.join(getKimiCodeConfigDir(), 'credentials', 'kimi-code.json');
+
+const getCodeBuddyConfigDir = (): string => {
+  const primary = path.join(homeDir(), '.codebuddy');
+  const fallback = path.join(homeDir(), '.workbuddy');
+  return fs.existsSync(path.join(primary, 'settings.json')) || fs.existsSync(path.join(primary, 'mcp.json'))
+    ? primary
+    : fallback;
+};
 
 const getNestedRecord = (value: unknown, key: string): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
@@ -533,6 +541,22 @@ const readKimiCodeConfigSummary = (
   };
 };
 
+const readCodeBuddyConfigSummary = (
+  configPath: string,
+): CliConfigSummary => {
+  const config = readJsonObject(configPath);
+  if (!config) {
+    return { providerId: null, providerName: null, count: 0 };
+  }
+  const model = getString(config.model);
+  const provider = getString(config.provider) || getString(config.model_provider);
+  return {
+    providerId: provider || model || null,
+    providerName: model || provider || null,
+    count: model ? 1 : 0,
+  };
+};
+
 interface CliAuthSummary {
   authStatus: CliAuthStatus;
   authSource: string | null;
@@ -551,6 +575,7 @@ const localEnvKeysByAppType: Record<CliAppType, string[]> = {
   opensquilla: ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'OPENROUTER_API_KEY', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'DEEPSEEK_API_KEY', 'DASHSCOPE_API_KEY', 'QWEN_API_KEY', 'MOONSHOT_API_KEY', 'ZAI_API_KEY', 'Z_AI_API_KEY'],
   kimi: ['MOONSHOT_API_KEY', 'KIMI_API_KEY'],
   mimo_code: ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'],
+  codebuddy: ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'],
 };
 
 const formatAuthSource = (filePath: string): string => (
@@ -604,6 +629,13 @@ const buildAuthPathCandidates = (
       path.join(sdkDir, 'auth.json'),
       path.join(sdkDir, 'credentials.json'),
       path.join(sdkDir, 'oauth.json'),
+    ];
+  }
+  if (appType === 'codebuddy') {
+    return [
+      ...common,
+      path.join(configDir, 'auth.json'),
+      path.join(configDir, 'credentials.json'),
     ];
   }
   return common;
@@ -669,7 +701,7 @@ const readCurrentProviderFromDb = (
   appType: CliAppType,
   settingsCurrentProviderId: string | null,
 ): { provider: ProviderRow | null; count: number } => {
-  if (appType === 'openclaw' || appType === 'opencode' || appType === 'mimo_code' || appType === 'grok' || appType === 'qwen' || appType === 'deepseek_tui' || appType === 'opensquilla' || appType === 'kimi') {
+  if (appType === 'openclaw' || appType === 'opencode' || appType === 'mimo_code' || appType === 'grok' || appType === 'qwen' || appType === 'deepseek_tui' || appType === 'opensquilla' || appType === 'kimi' || appType === 'codebuddy') {
     return { provider: null, count: 0 };
   }
   if (!fs.existsSync(dbPath)) {
@@ -881,6 +913,12 @@ const getWindowsSearchPaths = (command: string): string[] => {
       path.join(home, '.local', 'bin', 'kimi'),
     ];
   }
+  if (command === 'codebuddy') {
+    return [
+      path.join(appData, 'npm', 'codebuddy.cmd'),
+      path.join(appData, 'npm', 'cbc.cmd'),
+    ];
+  }
 
   return [];
 };
@@ -1012,10 +1050,14 @@ const buildCliConfigSnapshot = (
             ? getDeepSeekTuiConfigDir()
             : appType === 'opensquilla'
               ? getOpenSquillaConfigDir()
-              : fs.existsSync(path.join(getKimiCodeConfigDir(), 'config.toml'))
-                ? getKimiCodeConfigDir()
-                : getKimiSdkConfigDir();
-  const primaryConfigPath = appType === 'claude'
+              : appType === 'codebuddy'
+                ? getCodeBuddyConfigDir()
+                : appType === 'mimo_code'
+                  ? path.join(homeDir(), '.claude')
+                  : fs.existsSync(path.join(getKimiCodeConfigDir(), 'config.toml'))
+                    ? getKimiCodeConfigDir()
+                    : getKimiSdkConfigDir();
+  const primaryConfigPath = appType === 'claude' || appType === 'mimo_code'
     ? resolveClaudeSettingsPath(configDir)
     : appType === 'codex'
       ? path.join(configDir, 'config.toml')
@@ -1033,8 +1075,10 @@ const buildCliConfigSnapshot = (
             ? path.join(configDir, 'config.toml')
             : appType === 'opensquilla'
               ? path.join(configDir, 'config.toml')
-              : path.join(configDir, 'config.toml');
-  const secondaryConfigPaths = appType === 'claude'
+              : appType === 'codebuddy'
+                ? path.join(configDir, 'settings.json')
+                : path.join(configDir, 'config.toml');
+  const secondaryConfigPaths = appType === 'claude' || appType === 'mimo_code'
     ? [resolveClaudeMcpPath(configDir, Boolean(claudeOverride))]
     : appType === 'codex'
       ? [path.join(configDir, 'auth.json')]
@@ -1052,7 +1096,9 @@ const buildCliConfigSnapshot = (
             ? [path.join(configDir, 'sessions')]
             : appType === 'opensquilla'
               ? [path.join(configDir, 'opensquilla.toml'), path.join(configDir, '.env'), path.join(configDir, 'state')]
-              : [
+              : appType === 'codebuddy'
+                ? [path.join(configDir, 'mcp.json')]
+                : [
                 path.join(configDir, 'session_index.jsonl'),
                 path.join(configDir, 'skills'),
                 path.join(configDir, 'mcp.json'),
@@ -1169,6 +1215,19 @@ const buildCliConfigSnapshot = (
       providerCount: summary.count,
     };
   }
+  if (appType === 'codebuddy') {
+    const summary = readCodeBuddyConfigSummary(primaryConfigPath);
+    return {
+      appType,
+      configDir,
+      primaryConfigPath,
+      secondaryConfigPaths,
+      configExists: fs.existsSync(primaryConfigPath),
+      currentProviderId: summary.providerId,
+      currentProviderName: summary.providerName,
+      providerCount: summary.count,
+    };
+  }
   const { provider, count } = readCurrentProviderFromDb(dbPath, appType, settingsCurrentProviderId);
   const nativeSummary = !provider && count === 0
     ? appType === 'claude'
@@ -1266,6 +1325,7 @@ const AGENT_ENGINE_COMMANDS = [
   { engine: CoworkAgentEngine.OpenSquilla, appType: 'opensquilla', command: 'opensquilla' },
   { engine: CoworkAgentEngine.KimiCode, appType: 'kimi', command: 'kimi' },
   { engine: CoworkAgentEngine.MiMoCode, appType: 'mimo_code', command: 'mimo' },
+  { engine: CoworkAgentEngine.CodeBuddyCode, appType: 'codebuddy', command: 'codebuddy' },
 ] as const satisfies Array<{ engine: CliCoworkAgentEngine; appType: CliAppType; command: string }>;
 
 const listAgentEngineCommands = (

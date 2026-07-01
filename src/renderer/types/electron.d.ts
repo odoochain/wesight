@@ -1,5 +1,6 @@
 import type {
   ClaudeCodePermissionMode,
+  CodeBuddyPermissionMode,
   CoworkAgentEngine,
   CoworkSessionKind,
   DeepSeekTuiPermissionMode,
@@ -126,6 +127,8 @@ interface CoworkConfig {
   opensquillaPermissionMode: OpenSquillaPermissionMode;
   kimiCodeConfigSource: ExternalAgentConfigSource;
   kimiCodePermissionMode: KimiCodePermissionMode;
+  codeBuddyCodeConfigSource: ExternalAgentConfigSource;
+  codeBuddyCodePermissionMode: CodeBuddyPermissionMode;
   memoryEnabled: boolean;
   memoryImplicitUpdateEnabled: boolean;
   memoryLlmJudgeEnabled: boolean;
@@ -153,6 +156,8 @@ type CoworkConfigUpdate = Partial<Pick<
   | 'opensquillaPermissionMode'
   | 'kimiCodeConfigSource'
   | 'kimiCodePermissionMode'
+  | 'codeBuddyCodeConfigSource'
+  | 'codeBuddyCodePermissionMode'
   | 'memoryEnabled'
   | 'memoryImplicitUpdateEnabled'
   | 'memoryLlmJudgeEnabled'
@@ -160,7 +165,7 @@ type CoworkConfigUpdate = Partial<Pick<
   | 'memoryUserMemoriesMaxItems'
 >>;
 
-type CliAppType = 'claude' | 'codex' | 'hermes' | 'openclaw' | 'opencode' | 'grok' | 'qwen' | 'deepseek_tui' | 'opensquilla' | 'kimi';
+type CliAppType = 'claude' | 'codex' | 'hermes' | 'openclaw' | 'opencode' | 'grok' | 'qwen' | 'deepseek_tui' | 'opensquilla' | 'kimi' | 'mimo_code' | 'codebuddy';
 type CliAuthStatus = 'unknown' | 'logged_out' | 'logged_in' | 'expired' | 'unconfigured';
 
 interface CliAppConfigSnapshot {
